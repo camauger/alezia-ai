@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alezia AI - Système de JDR avec IA</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <!-- Ajout de Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Intégration de FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- En-tête -->
+        <header class="app-header">
+            <div class="logo">
+                <h1>Alezia AI</h1>
+                <span class="tagline">Jeu de rôle avec IA non censurée</span>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="#" class="active"><i class="fas fa-home"></i> Accueil</a></li>
+                    <li><a href="#"><i class="fas fa-user-circle"></i> Personnages</a></li>
+                    <li><a href="#"><i class="fas fa-globe"></i> Univers</a></li>
+                    <li><a href="#"><i class="fas fa-cog"></i> Paramètres</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <!-- Contenu principal -->
+        <main class="main-content">
+            <!-- Section d'introduction -->
+            <section class="intro-section">
+                <h2>Bienvenue sur Alezia AI</h2>
+                <p>Explorez des mondes immersifs et interagissez avec des personnages IA dotés de personnalités riches et évolutives.</p>
+
+                <div class="status-indicator">
+                    <span class="status offline" id="api-status">
+                        <i class="fas fa-circle"></i> API déconnectée
+                    </span>
+                    <span class="status offline" id="llm-status">
+                        <i class="fas fa-circle"></i> Modèle AI non chargé
+                    </span>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn primary" id="start-chat"><i class="fas fa-comment"></i> Nouvelle conversation</button>
+                    <button class="btn secondary" id="create-character"><i class="fas fa-user-plus"></i> Créer un personnage</button>
+                </div>
+            </section>
+
+            <!-- Section des personnages récents -->
+            <section class="characters-section">
+                <h3>Personnages récents</h3>
+                <div class="characters-grid" id="recent-characters">
+                    <div class="character-card placeholder">
+                        <div class="character-avatar placeholder"></div>
+                        <div class="character-info">
+                            <h4>Aucun personnage</h4>
+                            <p>Créez votre premier personnage pour commencer</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section du chat (initialement cachée) -->
+            <section class="chat-section hidden" id="chat-container">
+                <div class="chat-header">
+                    <div class="chat-character-info">
+                        <img src="assets/images/placeholder-avatar.jpg" alt="Avatar du personnage" id="chat-avatar">
+                        <div>
+                            <h3 id="chat-character-name">Nom du personnage</h3>
+                            <span id="chat-universe">Univers</span>
+                        </div>
+                    </div>
+                    <button class="btn icon" id="close-chat"><i class="fas fa-times"></i></button>
+                </div>
+
+                <div class="chat-messages" id="messages-container">
+                    <!-- Les messages seront ajoutés ici dynamiquement -->
+                    <div class="system-message">
+                        <p>Début de la conversation. Le personnage est prêt à interagir.</p>
+                    </div>
+                </div>
+
+                <div class="chat-input">
+                    <textarea id="user-input" placeholder="Écrivez votre message ici..."></textarea>
+                    <button class="btn primary" id="send-message"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Pied de page -->
+        <footer class="app-footer">
+            <p>&copy; 2024 Alezia AI - Version 0.1.0</p>
+            <p>Conçu pour fonctionner localement avec <a href="https://ollama.com" target="_blank">Ollama</a></p>
+        </footer>
+    </div>
+
+    <!-- Modales -->
+    <div class="modal" id="character-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Créer un personnage</h3>
+                <button class="btn icon" id="close-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="character-form">
+                    <div class="form-group">
+                        <label for="character-name">Nom</label>
+                        <input type="text" id="character-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="character-description">Description</label>
+                        <textarea id="character-description" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="character-personality">Personnalité</label>
+                        <textarea id="character-personality" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="character-universe">Univers</label>
+                        <select id="character-universe">
+                            <option value="1">Taliria (Médiéval Fantasy)</option>
+                            <option value="new">Créer un nouvel univers...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="character-backstory">Histoire personnelle (optionnel)</label>
+                        <textarea id="character-backstory"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn primary">Créer le personnage</button>
+                        <button type="button" class="btn secondary" id="cancel-character">Annuler</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/main.js"></script>
+</body>
+</html>

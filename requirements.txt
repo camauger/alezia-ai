@@ -1,0 +1,35 @@
+# Alezia AI - Système de JDR avec IA
+# Dépendances principales
+
+# Framework API
+fastapi>=0.105.0
+uvicorn>=0.24.0
+pydantic>=2.5.2
+starlette>=0.31.1
+python-multipart>=0.0.6
+
+# Gestion des données
+sqlalchemy>=2.0.23
+aiosqlite>=0.19.0
+
+# Client HTTP pour interagir avec Ollama
+httpx>=0.25.2
+aiohttp>=3.9.1
+
+# Traitement du langage naturel
+sentence-transformers>=2.2.2
+numpy>=1.24.3
+scipy>=1.11.4
+
+# Utilitaires
+python-dotenv>=1.0.0
+pyyaml>=6.0.1
+loguru>=0.7.2
+tenacity>=8.2.3
+
+# Sécurité
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Web (optionnel si vous utilisez le frontend séparé)
+jinja2>=3.1.2

@@ -1,0 +1,59 @@
+# Environnement virtuel Python
+venv/
+env/
+.env
+
+# Base de données SQLite
+*.sqlite
+*.sqlite3
+*.db
+
+# Fichiers d'embeddings et modèles locaux
+data/embeddings/
+*.gguf
+*.bin
+
+# Fichiers Python générés
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Logs
+*.log
+logs/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Répertoires spécifiques à l'IDE
+.idea/
+.vscode/
+*.code-workspace
+.vs/
+
+# Ollama
+Modelfile
+.ollama/
+
+# Dossiers temporaires
+tmp/
+temp/
+
+# Dépendances et builds JavaScript
+node_modules/
+dist/
+build/
+
+# Fichiers de config locaux
+config.local.py
+.env.local
