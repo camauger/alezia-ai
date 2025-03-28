@@ -3,6 +3,8 @@
  * Gestion de l'interface utilisateur
  */
 
+import { aleziaAPI } from './api.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     // Éléments DOM
     const apiStatusEl = document.getElementById('api-status');
@@ -43,11 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function checkAPIConnection() {
-        const apiConnected = await window.aleziaAPI.checkConnection();
+        const apiConnected = await aleziaAPI.checkConnection();
         updateConnectionStatus(apiStatusEl, apiConnected, 'API connectée', 'API déconnectée');
 
         if (apiConnected) {
-            const llmLoaded = await window.aleziaAPI.checkLLMStatus();
+            const llmLoaded = await aleziaAPI.checkLLMStatus();
             updateConnectionStatus(llmStatusEl, llmLoaded, 'Modèle AI chargé', 'Modèle AI non chargé');
             startChatBtn.disabled = !llmLoaded;
         } else {
@@ -69,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadCharacters() {
-        characters = await window.aleziaAPI.getCharacters();
+        characters = await aleziaAPI.getCharacters();
         renderCharacterList();
     }
 
@@ -175,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const newCharacter = await window.aleziaAPI.createCharacter({
+            const newCharacter = await aleziaAPI.createCharacter({
                 name,
                 description,
                 personality,
@@ -206,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Création d'une nouvelle session
         try {
-            const session = await window.aleziaAPI.createSession(character.id);
+            const session = await aleziaAPI.createSession(character.id);
             currentSession = session;
 
             // Vider les messages précédents
@@ -243,7 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
             messagesContainer.appendChild(loadingEl);
 
             // Envoyer le message à l'API
-            const response = await window.aleziaAPI.sendMessage(currentSession.id, message);
+            const response = await aleziaAPI.sendMessage(currentSession.id, message);
 
             // Supprimer l'indicateur de chargement
             messagesContainer.removeChild(loadingEl);

@@ -370,5 +370,4 @@ class AleziaAPI {
     }
 }
 
-// Exporter une instance globale
-window.aleziaAPI = new AleziaAPI();
+export const aleziaAPI = new AleziaAPI();
