@@ -4,14 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alezia AI - Système de JDR avec IA</title>
+    <!-- Styles et scripts externes -->
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Ajout de Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Intégration de FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- Polyfills pour les navigateurs plus anciens -->
+    <script>
+        if (!('AbortSignal' in window) || !('timeout' in AbortSignal)) {
+            AbortSignal.timeout = function timeout(ms) {
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), ms);
+                return controller.signal;
+            };
+        }
+    </script>
 </head>
 <body>
     <div class="app-container">
+        <!-- Overlay de chargement -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-content">
+                <i class="fas fa-spinner fa-spin fa-3x"></i>
+                <p>Chargement d'Alezia AI...</p>
+                <div class="loading-status">
+                    <div id="loading-api-status" class="loading-item">
+                        <i class="fas fa-circle offline"></i> Connexion à l'API...
+                    </div>
+                    <div id="loading-llm-status" class="loading-item">
+                        <i class="fas fa-circle offline"></i> Chargement du modèle AI...
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- En-tête -->
         <header class="app-header">
             <div class="logo">
@@ -141,6 +168,6 @@
 
     <!-- Scripts -->
     <script src="assets/js/api.js"></script>
-    <script type="module" src="assets/js/main.js"></script>
+    <script src="assets/js/main.js"></script>
 </body>
 </html>

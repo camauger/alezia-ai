@@ -240,6 +240,7 @@ class AleziaAPI {
         try {
             // Utiliser l'API réelle de chat
             console.log(`Envoi d'un message à la session ${sessionId}: ${message}`);
+            console.log(`URL de l'API pour l'envoi de message: ${this.baseUrl}/chat/${sessionId}/message`);
 
             const response = await fetch(`${this.baseUrl}/chat/${sessionId}/message`, {
                 method: 'POST',
@@ -247,23 +248,72 @@ class AleziaAPI {
                 body: JSON.stringify({ content: message })
             });
 
+            console.log("Statut de la réponse:", response.status, response.statusText);
+
             if (response.ok) {
-                return await response.json();
+                const data = await response.json();
+                console.log("Réponse du serveur:", data);
+                return data;
             } else {
-                const error = await response.json();
-                throw new Error(error.detail || 'Impossible d\'envoyer le message');
+                let errorDetail = 'Impossible d\'envoyer le message';
+
+                try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.detail || errorDetail;
+                    console.error("Détail de l'erreur API:", errorData);
+                } catch (e) {
+                    console.error("Impossible de parser l'erreur:", e);
+                }
+
+                throw new Error(errorDetail);
             }
         } catch (error) {
-            console.error('Erreur lors de l\'envoi du message:', error);
+            console.error('Erreur détaillée lors de l\'envoi du message:', error);
 
-            // En cas d'échec de l'API, retourner une réponse simulée
-            console.warn('Utilisation d\'une réponse simulée suite à l\'échec de l\'API');
-            return {
-                id: Math.floor(Math.random() * 1000),
-                content: "Je suis désolé, une erreur s'est produite lors de la communication avec le serveur. Veuillez réessayer plus tard.",
-                timestamp: new Date().toISOString()
-            };
+            // Générer une réponse simulée plus élaborée
+            return this._generateMockResponse(message, sessionId);
         }
+    }
+
+    /**
+     * Génère une réponse simulée
+     * @private
+     * @param {string} userMessage Le message de l'utilisateur
+     * @param {number} sessionId ID de la session
+     * @returns {Object} Réponse simulée
+     */
+    _generateMockResponse(userMessage, sessionId) {
+        console.warn('Utilisation d\'une réponse simulée suite à l\'échec de l\'API');
+
+        // Extraire des mots-clés pour personnaliser la réponse simulée
+        const messageLC = userMessage.toLowerCase();
+        let response = "";
+
+        if (messageLC.includes('bonjour') || messageLC.includes('salut') || messageLC.includes('hello')) {
+            response = "Bonjour ! Je suis heureux de vous rencontrer. Comment puis-je vous aider aujourd'hui ?";
+        }
+        else if (messageLC.includes('comment') && (messageLC.includes('tu') || messageLC.includes('va'))) {
+            response = "Je vais très bien, merci de demander ! Et vous, comment allez-vous ?";
+        }
+        else if (messageLC.includes('aime') || messageLC.includes('préfère')) {
+            response = "C'est intéressant ce que vous dites sur vos préférences. Personnellement, j'aime découvrir de nouvelles choses.";
+        }
+        else if (messageLC.includes('?')) {
+            response = "C'est une question intéressante. Laissez-moi y réfléchir... Si j'avais plus d'informations, je pourrais vous donner une meilleure réponse.";
+        }
+        else if (messageLC.length < 10) {
+            response = "Je vous écoute. N'hésitez pas à me dire plus sur ce qui vous intéresse.";
+        }
+        else {
+            response = `Je comprends ce que vous dites à propos de "${userMessage.substring(0, 20)}...". C'est un sujet qui mérite qu'on s'y attarde. Pouvez-vous m'en dire plus ?`;
+        }
+
+        return {
+            id: Math.floor(Math.random() * 1000) + 1,
+            content: response,
+            timestamp: new Date().toISOString(),
+            mock: true
+        };
     }
 
     /**
@@ -370,4 +420,4 @@ class AleziaAPI {
     }
 }
 
-export const aleziaAPI = new AleziaAPI();
+window.aleziaAPI = new AleziaAPI();

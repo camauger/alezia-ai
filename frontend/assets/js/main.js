@@ -3,70 +3,146 @@
  * Gestion de l'interface utilisateur
  */
 
-import { aleziaAPI } from './api.js';
-
-document.addEventListener('DOMContentLoaded', () => {
-    // Éléments DOM
-    const apiStatusEl = document.getElementById('api-status');
-    const llmStatusEl = document.getElementById('llm-status');
-    const createCharacterBtn = document.getElementById('create-character');
-    const startChatBtn = document.getElementById('start-chat');
+document.addEventListener('DOMContentLoaded', async () => {
+    // Éléments du DOM
+    const apiStatus = document.getElementById('api-status');
+    const llmStatus = document.getElementById('llm-status');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingApiStatus = document.getElementById('loading-api-status');
+    const loadingLlmStatus = document.getElementById('loading-llm-status');
+    const recentCharactersContainer = document.getElementById('recent-characters');
     const characterModal = document.getElementById('character-modal');
     const closeModalBtn = document.getElementById('close-modal');
     const characterForm = document.getElementById('character-form');
     const cancelCharacterBtn = document.getElementById('cancel-character');
+    const createCharacterBtn = document.getElementById('create-character');
+    const startChatBtn = document.getElementById('start-chat');
     const chatContainer = document.getElementById('chat-container');
-    const closeChat = document.getElementById('close-chat');
+    const messagesContainer = document.getElementById('messages-container');
     const userInput = document.getElementById('user-input');
     const sendMessageBtn = document.getElementById('send-message');
-    const messagesContainer = document.getElementById('messages-container');
-    const recentCharactersContainer = document.getElementById('recent-characters');
+    const closeChat = document.getElementById('close-chat');
 
-    // Variables d'état
-    let currentSession = null;
-    let currentCharacter = null;
+    // Variables globales
     let characters = [];
+    let currentCharacter = null;
+    let currentSession = null;
+    let apiConnected = false;
+    let llmLoaded = false;
+
+    // Désactiver l'interface pendant le chargement
+    disableInterface();
 
     // Initialisation
-    init();
+    await init();
 
     async function init() {
-        // Vérification de la connexion à l'API
         await checkAPIConnection();
-
-        // Vérification périodique de la connexion
-        setInterval(checkAPIConnection, 30000);
-
-        // Chargement des personnages
         await loadCharacters();
-
-        // Ajout des écouteurs d'événements
         addEventListeners();
     }
 
-    async function checkAPIConnection() {
-        const apiConnected = await aleziaAPI.checkConnection();
-        updateConnectionStatus(apiStatusEl, apiConnected, 'API connectée', 'API déconnectée');
+    function disableInterface() {
+        // Afficher l'overlay de chargement
+        loadingOverlay.style.display = 'flex';
 
-        if (apiConnected) {
-            const llmLoaded = await aleziaAPI.checkLLMStatus();
-            updateConnectionStatus(llmStatusEl, llmLoaded, 'Modèle AI chargé', 'Modèle AI non chargé');
-            startChatBtn.disabled = !llmLoaded;
-        } else {
-            updateConnectionStatus(llmStatusEl, false, 'Modèle AI chargé', 'Modèle AI non chargé');
-            startChatBtn.disabled = true;
-        }
+        // Désactiver les boutons principaux
+        startChatBtn.disabled = true;
+        createCharacterBtn.disabled = true;
     }
 
-    function updateConnectionStatus(element, isConnected, onlineText, offlineText) {
-        if (isConnected) {
-            element.classList.remove('offline');
-            element.classList.add('online');
-            element.innerHTML = `<i class="fas fa-circle"></i> ${onlineText}`;
-        } else {
-            element.classList.remove('online');
-            element.classList.add('offline');
-            element.innerHTML = `<i class="fas fa-circle"></i> ${offlineText}`;
+    function enableInterface() {
+        // Cacher l'overlay de chargement avec une transition
+        loadingOverlay.classList.add('fade-out');
+        setTimeout(() => {
+            loadingOverlay.style.display = 'none';
+            loadingOverlay.classList.remove('fade-out');
+        }, 500);
+
+        // Activer les boutons principaux
+        startChatBtn.disabled = false;
+        createCharacterBtn.disabled = false;
+    }
+
+    // Vérification du statut de l'API
+    async function checkAPIConnection() {
+        try {
+            console.log("Vérification de la connexion API...");
+
+            // Mettre à jour l'interface de chargement
+            loadingApiStatus.innerHTML = '<i class="fas fa-circle pending"></i> Tentative de connexion à l\'API...';
+
+            // Essayer la connexion avec des tentatives répétées
+            let connected = false;
+            let attempts = 0;
+            const maxAttempts = 10;
+
+            while (!connected && attempts < maxAttempts) {
+                try {
+                    connected = await aleziaAPI.checkConnection();
+                    if (connected) break;
+                } catch (error) {
+                    console.log(`Tentative ${attempts + 1}/${maxAttempts} échouée: ${error.message}`);
+                }
+
+                attempts++;
+                // Attendre 1 seconde entre chaque tentative
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                loadingApiStatus.innerHTML = `<i class="fas fa-circle pending"></i> Tentative ${attempts + 1}/${maxAttempts} de connexion...`;
+            }
+
+            apiConnected = connected;
+
+            if (connected) {
+                // Mise à jour de l'UI principale
+                apiStatus.classList.remove('offline');
+                apiStatus.classList.add('online');
+                apiStatus.innerHTML = '<i class="fas fa-circle"></i> API connectée';
+
+                // Mise à jour de l'overlay de chargement
+                loadingApiStatus.innerHTML = '<i class="fas fa-circle online"></i> API connectée';
+
+                // Vérifier le statut du modèle LLM
+                loadingLlmStatus.innerHTML = '<i class="fas fa-circle pending"></i> Vérification du modèle AI...';
+
+                const llmLoaded = await aleziaAPI.checkLLMStatus();
+
+                if (llmLoaded) {
+                    llmStatus.classList.remove('offline');
+                    llmStatus.classList.add('online');
+                    llmStatus.innerHTML = '<i class="fas fa-circle"></i> Modèle AI chargé';
+                    loadingLlmStatus.innerHTML = '<i class="fas fa-circle online"></i> Modèle AI chargé';
+                } else {
+                    llmStatus.innerHTML = '<i class="fas fa-circle"></i> Modèle AI non chargé (mode simulation)';
+                    llmStatus.classList.add('warning');
+                    loadingLlmStatus.innerHTML = '<i class="fas fa-circle warning"></i> Mode simulation activé';
+                }
+
+                // Activer l'interface
+                enableInterface();
+            } else {
+                console.error("API déconnectée après plusieurs tentatives");
+                apiStatus.innerHTML = '<i class="fas fa-circle"></i> API déconnectée - Mode offline';
+                apiStatus.classList.add('error');
+
+                loadingApiStatus.innerHTML = '<i class="fas fa-circle error"></i> Échec de connexion à l\'API';
+                loadingLlmStatus.innerHTML = '<i class="fas fa-circle error"></i> Impossible de vérifier le modèle';
+
+                // Activer quand même l'interface mais avec un message d'avertissement
+                setTimeout(() => {
+                    alert("L'API n'est pas disponible. L'application fonctionnera en mode limité.");
+                    enableInterface();
+                }, 1000);
+            }
+        } catch (error) {
+            console.error("Erreur lors de la vérification du statut de l'API:", error);
+            loadingApiStatus.innerHTML = '<i class="fas fa-circle error"></i> Erreur de connexion';
+
+            // Activer quand même l'interface en mode limité
+            setTimeout(() => {
+                alert("Erreur de connexion à l'API. L'application fonctionnera en mode limité.");
+                enableInterface();
+            }, 1000);
         }
     }
 
@@ -201,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function selectCharacter(character) {
         currentCharacter = character;
+        console.log("Sélection du personnage:", character);
 
         // Mise à jour de l'interface
         document.getElementById('chat-character-name').textContent = character.name;
@@ -208,7 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Création d'une nouvelle session
         try {
+            console.log("Création d'une session pour le personnage ID:", character.id);
             const session = await aleziaAPI.createSession(character.id);
+            console.log("Session créée:", session);
             currentSession = session;
 
             // Vider les messages précédents
@@ -222,6 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
             chatContainer.classList.remove('hidden');
             userInput.focus();
         } catch (error) {
+            console.error(`Erreur détaillée lors de la création de la session:`, error);
             alert(`Erreur lors de la création de la session: ${error.message}`);
         }
     }
@@ -244,8 +324,14 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingEl.innerHTML = '<p><i class="fas fa-spinner fa-spin"></i> Le personnage est en train de répondre...</p>';
             messagesContainer.appendChild(loadingEl);
 
+            // Logs de débogage pour le chat
+            console.log("Envoi de message - Session ID:", currentSession.id);
+            console.log("Envoi de message - Contenu:", message);
+            console.log("Envoi de message - URL API:", aleziaAPI.baseUrl);
+
             // Envoyer le message à l'API
             const response = await aleziaAPI.sendMessage(currentSession.id, message);
+            console.log("Réponse reçue:", response);
 
             // Supprimer l'indicateur de chargement
             messagesContainer.removeChild(loadingEl);

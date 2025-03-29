@@ -7,6 +7,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Union
+from time import sleep
 
 import logging
 
@@ -48,24 +49,47 @@ class DatabaseManager:
             conn.commit()
             conn.close()
             logger.info("Schéma de base de données initialisé avec succès")
+
+            # Assurer la présence d'un univers par défaut
+            self.ensure_default_universe()
         except Exception as e:
             logger.error(f"Erreur lors de l'initialisation du schéma: {e}")
 
     def _get_connection(self) -> sqlite3.Connection:
         """Obtient une connexion à la base de données"""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        # Activer l'extension JSON1 pour les opérations JSON
-        conn.enable_load_extension(True)
         try:
-            conn.load_extension("json1")
-        except sqlite3.OperationalError:
-            logger.warning(
-                "Impossible de charger l'extension JSON1, certaines fonctionnalités peuvent être limitées")
-        conn.enable_load_extension(False)
-        # Permettre la conversion automatique des objets datetime
-        conn.execute("PRAGMA foreign_keys = ON")
-        return conn
+            # Configurer les timeouts et le mode d'isolation pour éviter les problèmes de verrouillage
+            conn = sqlite3.connect(
+                str(self.db_path),
+                timeout=30.0,  # Augmenter le timeout d'attente pour le verrou
+                isolation_level=None  # Permet de contrôler les transactions manuellement
+            )
+
+            conn.row_factory = sqlite3.Row
+
+            # Activer l'extension JSON1 pour les opérations JSON
+            conn.enable_load_extension(True)
+            try:
+                conn.load_extension("json1")
+            except sqlite3.OperationalError:
+                logger.warning(
+                    "Impossible de charger l'extension JSON1, certaines fonctionnalités peuvent être limitées")
+            conn.enable_load_extension(False)
+
+            # Permettre la conversion automatique des objets datetime
+            conn.execute("PRAGMA foreign_keys = ON")
+
+            # Configuration pour réduire les problèmes de verrouillage
+            conn.execute("PRAGMA journal_mode = WAL")  # Write-Ahead Logging
+            # Moins synchro avec le disque
+            conn.execute("PRAGMA synchronous = NORMAL")
+            conn.execute("PRAGMA busy_timeout = 5000")  # 5 secondes d'attente
+
+            return conn
+        except Exception as e:
+            logger.error(
+                f"Erreur lors de la connexion à la base de données: {e}")
+            raise
 
     def _dict_to_db_format(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Convertit un dictionnaire Python en format compatible avec SQLite"""
@@ -101,30 +125,57 @@ class DatabaseManager:
 
     def execute_query(self, query: str, params: Tuple = (), fetchall: bool = True) -> Union[List[Dict[str, Any]], Dict[str, Any], None]:
         """Exécute une requête SQL et retourne les résultats"""
-        try:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            cursor.execute(query, params)
+        max_retries = 3
+        retry_count = 0
+        result = None
+        conn = None
 
-            if query.strip().upper().startswith("SELECT"):
-                if fetchall:
-                    rows = cursor.fetchall()
-                    result = [self._row_to_dict(row) for row in rows]
+        while retry_count < max_retries:
+            try:
+                conn = self._get_connection()
+
+                # Utiliser un bloc explicite de transaction pour les requêtes d'écriture
+                if query.strip().upper().startswith(("INSERT", "UPDATE", "DELETE")):
+                    conn.execute("BEGIN IMMEDIATE")
+
+                cursor = conn.cursor()
+                cursor.execute(query, params)
+
+                if query.strip().upper().startswith("SELECT"):
+                    if fetchall:
+                        rows = cursor.fetchall()
+                        result = [self._row_to_dict(row) for row in rows]
+                    else:
+                        row = cursor.fetchone()
+                        result = self._row_to_dict(row) if row else None
                 else:
-                    row = cursor.fetchone()
-                    result = self._row_to_dict(row) if row else None
-            else:
-                conn.commit()
-                result = {"rowcount": cursor.rowcount,
-                          "lastrowid": cursor.lastrowid}
+                    conn.commit()
+                    result = {"rowcount": cursor.rowcount,
+                              "lastrowid": cursor.lastrowid}
 
-            conn.close()
-            return result
-        except Exception as e:
-            logger.error(f"Erreur SQL: {e}, Query: {query}, Params: {params}")
-            if 'conn' in locals():
-                conn.close()
-            raise
+                # Requête réussie, sortir de la boucle
+                break
+            except sqlite3.OperationalError as e:
+                if "database is locked" in str(e) and retry_count < max_retries - 1:
+                    # Base de données verrouillée, attendre et réessayer
+                    retry_count += 1
+                    wait_time = retry_count * 1.5  # Backoff exponentiel
+                    logger.warning(
+                        f"Base de données verrouillée, nouvel essai dans {wait_time}s (essai {retry_count}/{max_retries})")
+                    sleep(wait_time)
+                else:
+                    logger.error(
+                        f"Erreur SQL: {e}, Query: {query}, Params: {params}")
+                    raise
+            except Exception as e:
+                logger.error(
+                    f"Erreur SQL: {e}, Query: {query}, Params: {params}")
+                raise
+            finally:
+                if conn:
+                    conn.close()
+
+        return result
 
     def insert(self, table: str, data: Dict[str, Any]) -> int:
         """Insère des données dans une table et retourne l'ID de la ligne insérée"""
@@ -164,6 +215,64 @@ class DatabaseManager:
         if limit:
             query += f" LIMIT {limit}"
         return self.execute_query(query)
+
+    def ensure_default_universe(self):
+        """Vérifie qu'un univers par défaut existe et le crée si nécessaire"""
+        try:
+            # Vérifier si au moins un univers existe
+            universes = self.get_all("universes")
+
+            if not universes:
+                logger.info(
+                    "Aucun univers trouvé, création de l'univers par défaut 'Taliria'")
+                default_universe = {
+                    "name": "Taliria",
+                    "description": "Un monde médiéval-fantastique où magie et créatures mythiques coexistent avec des civilisations humanoïdes.",
+                    "type": "fantasy",
+                    "time_period": "Médiéval",
+                    "rules": "Magie élémentaire, royaumes en conflit, diverses races intelligentes",
+                    "created_at": datetime.now().isoformat()
+                }
+
+                universe_id = self.insert("universes", default_universe)
+                logger.info(
+                    f"Univers par défaut 'Taliria' créé avec l'ID {universe_id}")
+
+                # Créer quelques éléments d'univers
+                elements = [
+                    {
+                        "universe_id": universe_id,
+                        "name": "Le Royaume de Miridian",
+                        "type": "location",
+                        "description": "Royaume central de Taliria, connu pour ses bibliothèques et académies de magie",
+                        "importance": 5
+                    },
+                    {
+                        "universe_id": universe_id,
+                        "name": "La Confrérie de l'Aube",
+                        "type": "faction",
+                        "description": "Groupe de magiciens et érudits cherchant à préserver les anciennes connaissances",
+                        "importance": 4
+                    },
+                    {
+                        "universe_id": universe_id,
+                        "name": "Les Marais Brumeux",
+                        "type": "location",
+                        "description": "Région dangereuse et mystérieuse, repaire de créatures étranges",
+                        "importance": 3
+                    }
+                ]
+
+                for element in elements:
+                    self.insert("universe_elements", element)
+
+                logger.info(f"Éléments d'univers ajoutés pour 'Taliria'")
+                return universe_id
+            return universes[0]["id"]
+        except Exception as e:
+            logger.error(
+                f"Erreur lors de la création de l'univers par défaut: {e}")
+            return None
 
 
 # Instance globale du gestionnaire de base de données
