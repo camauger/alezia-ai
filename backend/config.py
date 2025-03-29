@@ -13,9 +13,11 @@ DB_PATH = DATA_DIR / "jdr_database.sqlite"
 
 # Configuration Ollama
 LLM_CONFIG = {
-    "api_host": "http://localhost:11434",
-    "default_model": "gemma:2b",
-    "fallback_model": "gemma:2b",  # ModÃ¨le plus lÃ©ger en fallback
+    "model_name": "mistral",  # Modèle par défaut
+    "fallback_model": "llama2",  # Modèle de secours
+    "max_tokens": 500,  # Nombre maximum de tokens pour les réponses
+    "temperature": 0.7,  # Température pour la génération
+    "ollama_base_url": "http://localhost:11434",  # URL de base pour Ollama
     "gpu_settings": {
         "gpu_layers": 35,  # Utiliser GPU pour la majoritÃ© des couches
         "num_gpu": 1,
@@ -27,7 +29,8 @@ LLM_CONFIG = {
 # Configuration de l'API
 API_CONFIG = {
     "host": "0.0.0.0",
-    "port": 8000,
+    "port_range": [8000, 8020],  # Plage de ports à essayer
+    "port_file": "api_port.txt",  # Fichier où stocker le port utilisé
     "debug": True,
     "workers": 4,  # Nombre de workers Uvicorn
     "timeout": 120,  # Timeout pour les requÃªtes longues

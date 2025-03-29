@@ -73,31 +73,81 @@ class MemoryManager:
 
     def _extract_facts(self, memory_id: int, character_id: int, content: str) -> List[int]:
         """Extrait des faits à partir du contenu d'une mémoire et les stocke"""
-        # Cette fonction pourrait utiliser un LLM pour extraire des faits
-        # Pour l'instant, nous utilisons une implémentation fictive
-
-        # Exemple simple: extraire des phrases qui commencent par "Je" ou "Tu"
+        # Version améliorée d'extraction de faits
         facts = []
-        for sentence in content.split('.'):
-            sentence = sentence.strip()
-            if sentence.startswith("Je ") or sentence.startswith("Tu "):
-                parts = sentence.split(' ', 2)
-                if len(parts) >= 3:
-                    subject = parts[0]
-                    predicate = parts[1]
-                    object_part = parts[2] if len(parts) > 2 else ""
+        sentences = [s.strip() for s in content.split('.') if s.strip()]
 
-                    fact = FactCreate(
-                        character_id=character_id,
-                        subject=subject,
-                        predicate=predicate,
-                        object=object_part,
-                        confidence=0.8,
-                        source_memory_id=memory_id
-                    )
+        # Motifs pour l'extraction de faits simples
+        subject_patterns = [
+            "Je", "Tu", "Il", "Elle", "Nous", "Vous", "Ils", "Elles",
+            "Mon", "Ton", "Son", "Notre", "Votre", "Leur"
+        ]
 
-                    fact_id = db_manager.insert("facts", fact.dict())
-                    facts.append(fact_id)
+        for sentence in sentences:
+            # Extraire des faits basés sur des modèles clés
+            words = sentence.split()
+            if len(words) < 3:
+                continue
+
+            # Extraction simple basée sur des modèles de phrase
+            for pattern in subject_patterns:
+                if sentence.startswith(pattern + " "):
+                    parts = sentence.split(' ', 2)
+                    if len(parts) >= 3:
+                        subject = parts[0]
+                        predicate = parts[1]
+                        object_part = parts[2] if len(parts) > 2 else ""
+
+                        # Créer et stocker le fait
+                        fact = FactCreate(
+                            character_id=character_id,
+                            subject=subject,
+                            predicate=predicate,
+                            object=object_part,
+                            confidence=0.8,
+                            source_memory_id=memory_id
+                        )
+
+                        fact_id = db_manager.insert("facts", fact.dict())
+                        facts.append(fact_id)
+                        break
+
+            # Extraction de faits sur des préférences
+            if "aime" in sentence or "adore" in sentence or "déteste" in sentence or "préfère" in sentence:
+                # Extraire des préférences simples
+                for verb in ["aime", "adore", "déteste", "préfère"]:
+                    if verb in sentence:
+                        parts = sentence.split(verb, 1)
+                        if len(parts) == 2:
+                            subject = parts[0].strip()
+                            if not subject:
+                                subject = "Le personnage"
+                            object_part = parts[1].strip()
+
+                            # Créer et stocker le fait
+                            fact = FactCreate(
+                                character_id=character_id,
+                                subject=subject,
+                                predicate=verb,
+                                object=object_part,
+                                confidence=0.7,
+                                source_memory_id=memory_id
+                            )
+
+                            fact_id = db_manager.insert("facts", fact.dict())
+                            facts.append(fact_id)
+
+        # Si des faits ont été extraits, les relier par une mémoire de synthèse
+        if facts and len(facts) > 1:
+            facts_summary = f"Faits extraits: {len(facts)} faits concernant {character_id}"
+            linked_memory = MemoryCreate(
+                character_id=character_id,
+                type="facts_extraction",
+                content=facts_summary,
+                importance=0.5,
+                metadata={"source_memory_id": memory_id, "fact_ids": facts}
+            )
+            self.create_memory(linked_memory)
 
         return facts
 
