@@ -51,9 +51,10 @@ SYSTEM_LIMITS = {
 
 # Configuration de sÃ©curitÃ©
 SECURITY_CONFIG = {
-    "token_expiration": 24 * 60 * 60,  # DurÃ©e de validitÃ© du token (en secondes)
+    # DurÃ©e de validitÃ© du token (en secondes)
+    "token_expiration": 24 * 60 * 60,
     "hash_algorithm": "HS256",
-    "cors_origins": ["http://localhost:8080", "http://127.0.0.1:8080"],
+    "cors_origins": ["http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:5500", "http://127.0.0.1:5500"],
 }
 
 # CrÃ©ation des rÃ©pertoires nÃ©cessaires

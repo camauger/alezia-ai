@@ -7,8 +7,7 @@ class AleziaAPI {
     constructor() {
         // Déterminer automatiquement l'URL de base en fonction de l'hôte actuel
         const hostname = window.location.hostname;
-        const possiblePorts = [8000, 8001, 8002, 8003, 8004, 8005];
-        this.baseUrl = `http://${hostname}:8001`; // Port par défaut
+        this.baseUrl = `http://${hostname}:8001`; // Changed from 8080
         this.connected = false;
 
         // Essayer de détecter automatiquement le port au démarrage
@@ -20,10 +19,51 @@ class AleziaAPI {
      */
     async detectPort() {
         const hostname = window.location.hostname || 'localhost';
-        const possiblePorts = [8000, 8001, 8002, 8003, 8004, 8005];
 
-        // Afficher un message dans la console
-        console.log('Recherche automatique du port API...');
+        console.log('Recherche du port API...');
+
+        // D'abord, essayer de lire le fichier api_port.txt
+        try {
+            const portResponse = await fetch('/api_port.txt', {
+                method: 'GET',
+                // Empêche la mise en cache du fichier
+                cache: 'no-store',
+                // Court timeout pour ne pas bloquer longtemps
+                signal: AbortSignal.timeout(300)
+            });
+
+            if (portResponse.ok) {
+                const port = await portResponse.text();
+                const portNumber = parseInt(port.trim(), 10);
+
+                if (!isNaN(portNumber) && portNumber >= 8000 && portNumber <= 8020) {
+                    // Vérifier si ce port répond effectivement
+                    try {
+                        const testUrl = `http://${hostname}:${portNumber}/health`;
+                        const response = await fetch(testUrl, {
+                            method: 'GET',
+                            headers: { 'Content-Type': 'application/json' },
+                            signal: AbortSignal.timeout(500)
+                        });
+
+                        if (response.ok) {
+                            this.baseUrl = `http://${hostname}:${portNumber}`;
+                            this.connected = true;
+                            console.log(`API détectée sur ${this.baseUrl} (via api_port.txt)`);
+                            return;
+                        }
+                    } catch (e) {
+                        console.warn(`Port ${portNumber} trouvé dans api_port.txt mais ne répond pas`);
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Fichier api_port.txt non accessible, utilisation de la détection par ports');
+        }
+
+        // Si la lecture du fichier échoue, revenir à la méthode de scan des ports
+        const possiblePorts = [8000, 8001, 8002, 8003, 8004, 8005, 8006, 8007, 8008, 8009, 8010,
+                             8011, 8012, 8013, 8014, 8015, 8016, 8017, 8018, 8019, 8020];
 
         // Tester chaque port
         for (const port of possiblePorts) {
@@ -32,7 +72,6 @@ class AleziaAPI {
                 const response = await fetch(testUrl, {
                     method: 'GET',
                     headers: { 'Content-Type': 'application/json' },
-                    // Utiliser un timeout court pour éviter de bloquer trop longtemps
                     signal: AbortSignal.timeout(500)
                 });
 
@@ -115,7 +154,7 @@ class AleziaAPI {
      */
     async getCharacters() {
         try {
-            const response = await fetch(`${this.baseUrl}/characters`, {
+            const response = await fetch(`${this.baseUrl}/characters/`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -139,7 +178,7 @@ class AleziaAPI {
     async createCharacter(character) {
         try {
             console.log('Création de personnage avec les données:', character);
-            const response = await fetch(`${this.baseUrl}/characters`, {
+            const response = await fetch(`${this.baseUrl}/characters/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(character)
@@ -175,7 +214,7 @@ class AleziaAPI {
      */
     async getUniverses() {
         try {
-            const response = await fetch(`${this.baseUrl}/universes`, {
+            const response = await fetch(`${this.baseUrl}/universes/`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -236,18 +275,59 @@ class AleziaAPI {
         try {
             // Utiliser l'API réelle de chat
             console.log(`Création d'une session pour le personnage ${characterId}`);
+            console.log(`URL de l'API: ${this.baseUrl}/chat/session`);
 
+            // Préparer les données à envoyer
+            const requestData = { character_id: characterId };
+            console.log("Données envoyées:", requestData);
+
+            // S'assurer d'utiliser le bon chemin avec le slash final
             const response = await fetch(`${this.baseUrl}/chat/session`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ character_id: characterId })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(requestData)
             });
 
+            console.log("Statut de la réponse:", response.status, response.statusText);
+
             if (response.ok) {
-                return await response.json();
+                const data = await response.json();
+                console.log("Données de session reçues:", data);
+                return data;
             } else {
-                const error = await response.json();
-                throw new Error(error.detail || 'Impossible de créer la session');
+                // Essayer de lire les détails de l'erreur
+                let errorDetail = '';
+                try {
+                    const error = await response.json();
+                    errorDetail = error.detail || '';
+                    console.error('Erreur API détaillée:', error);
+                } catch (e) {
+                    console.error('Impossible de lire les détails de l\'erreur:', e);
+                }
+
+                // Si l'erreur est 404, essayons avec un slash à la fin
+                if (response.status === 404) {
+                    console.log("Tentative avec URL alternative...");
+                    const altResponse = await fetch(`${this.baseUrl}/chat/session/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+
+                    if (altResponse.ok) {
+                        const altData = await altResponse.json();
+                        console.log("Données de session reçues (URL alternative):", altData);
+                        return altData;
+                    }
+                }
+
+                throw new Error(errorDetail || `Erreur ${response.status}: Impossible de créer la session`);
             }
         } catch (error) {
             console.error('Erreur lors de la création de la session:', error);
@@ -290,5 +370,4 @@ class AleziaAPI {
     }
 }
 
-// Exporter une instance globale
-window.aleziaAPI = new AleziaAPI();
+export const aleziaAPI = new AleziaAPI();

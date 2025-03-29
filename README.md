@@ -136,12 +136,14 @@ alezia-ai/
 L'API expose plusieurs endpoints pour interagir avec le système :
 
 ### Personnages
+
 - `GET /characters` - Liste des personnages disponibles
 - `POST /characters` - Création d'un nouveau personnage
 - `GET /characters/{id}` - Détails d'un personnage spécifique
 - `DELETE /characters/{id}` - Suppression d'un personnage
 
 ### Chat
+
 - `POST /chat/session` - Créer une nouvelle session de chat avec un personnage
 - `GET /chat/session/{session_id}` - Obtenir les détails d'une session spécifique
 - `GET /chat/character/{character_id}/sessions` - Lister les sessions d'un personnage
@@ -150,6 +152,7 @@ L'API expose plusieurs endpoints pour interagir avec le système :
 - `POST /chat/{session_id}/end` - Terminer une session de chat
 
 ### Système
+
 - `GET /system/check-database` - Vérification de l'état de la BD
 - `GET /system/check-llm` - Vérification de l'état du modèle LLM
 
@@ -186,6 +189,7 @@ Si l'API utilise un port différent de 8000, modifiez d'abord les scripts de tes
 ## Modèle de données
 
 ### Personnage (Character)
+
 - `id` - Identifiant unique
 - `name` - Nom du personnage
 - `description` - Description physique et comportementale
@@ -194,6 +198,7 @@ Si l'API utilise un port différent de 8000, modifiez d'abord les scripts de tes
 - `universe_id` - ID de l'univers auquel il appartient (optionnel)
 
 ### Session (Session)
+
 - `id` - Identifiant unique
 - `character_id` - Lien vers le personnage
 - `start_time` - Date et heure de début de session
@@ -201,6 +206,7 @@ Si l'API utilise un port différent de 8000, modifiez d'abord les scripts de tes
 - `summary` - Résumé automatique de la conversation (optionnel)
 
 ### Message (Message)
+
 - `id` - Identifiant unique
 - `session_id` - Lien vers la session
 - `is_user` - Booléen indiquant si c'est un message utilisateur
@@ -209,6 +215,7 @@ Si l'API utilise un port différent de 8000, modifiez d'abord les scripts de tes
 - `metadata` - Métadonnées additionnelles (JSON)
 
 ### Mémoire (Memory)
+
 - `id` - Identifiant unique
 - `character_id` - Lien vers le personnage
 - `type` - Type de mémoire (conversation, observation, etc.)
@@ -217,6 +224,7 @@ Si l'API utilise un port différent de 8000, modifiez d'abord les scripts de tes
 - `embedding` - Vecteur de représentation sémantique
 
 ### Relation (Relationship)
+
 - `character_id` - ID du personnage
 - `target_name` - Nom de la cible (autre personnage ou utilisateur)
 - `sentiment` - Sentiment (-1.0 à 1.0)
@@ -228,17 +236,21 @@ Si l'API utilise un port différent de 8000, modifiez d'abord les scripts de tes
 ### Problèmes de modèle AI
 
 Si vous voyez "Modèle AI non chargé" dans l'interface :
+
 1. Vérifiez qu'Ollama est en cours d'exécution
 2. Exécutez le script `.\install_models.ps1` pour installer un modèle compatible
 3. Redémarrez l'API après l'installation du modèle
 
 ### Problèmes de port
+
 Si vous voyez des erreurs comme "Errno 10048" ou "WinError 10013", cela signifie que le port est déjà utilisé:
+
 - Le script run_api.py trouve automatiquement un port disponible
 - Vérifiez dans la console le message indiquant le port utilisé
 - Assurez-vous d'utiliser ce même port dans votre navigateur
 
 ### Autres problèmes courants
+
 - **API ne démarre pas**: Vérifiez que toutes les dépendances sont installées avec `pip install -r requirements.txt`
 - **Extension JSON1**: Le message "Impossible de charger l'extension JSON1" est normal sur Windows et n'affecte pas les fonctionnalités essentielles
 - **Modèle d'embeddings**: Le message "Torch not compiled with CUDA enabled" est normal si vous n'avez pas de GPU compatible CUDA
@@ -249,7 +261,7 @@ Si vous voyez des erreurs comme "Errno 10048" ou "WinError 10013", cela signifie
 
 ```bash
 # Installer les dépendances de développement
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 
 # Exécuter les tests
 pytest
@@ -285,25 +297,3 @@ Ce projet est sous licence MIT - voir le fichier LICENSE pour plus de détails.
 
 Pour toute question ou suggestion, veuillez ouvrir une issue sur GitHub.
 
----
-
-**Note**: Ce système est conçu pour fonctionner localement sur votre machine. Les modèles d'IA utilisés ne sont pas censurés et peuvent générer du contenu pour adultes si le contexte narratif le justifie.
-
-## Images pour Alezia AI
-
-Ce répertoire doit contenir les images utilisées par l'application, notamment les avatars des personnages.
-
-### Images requises
-
-- `placeholder-avatar.jpg` : Image utilisée comme avatar par défaut pour les personnages. Idéalement une image de 256x256 pixels.
-
-### Comment ajouter des images
-
-1. Téléchargez une image d'avatar générique depuis un site comme [Unsplash](https://unsplash.com/) ou créez une image avec [Stable Diffusion](https://github.com/AUTOMATIC1111/stable-diffusion-webui).
-2. Redimensionnez l'image en 256x256 pixels.
-3. Enregistrez l'image sous le nom `placeholder-avatar.jpg` dans ce répertoire.
-
-### Notes
-
-- Si l'image n'est pas présente, l'interface utilisateur affichera une icône par défaut à la place.
-- Dans une version future, l'application pourra générer automatiquement des avatars pour les personnages avec des modèles de diffusion.

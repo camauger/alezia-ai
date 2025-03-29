@@ -22,6 +22,7 @@ class SessionCreate(BaseModel):
 
 
 @router.post("/session", status_code=201)
+@router.post("/session/", status_code=201)
 async def create_session(session: SessionCreate) -> Dict[str, Any]:
     """Crée une nouvelle session de chat"""
     try:
@@ -32,6 +33,7 @@ async def create_session(session: SessionCreate) -> Dict[str, Any]:
 
 
 @router.get("/session/{session_id}")
+@router.get("/session/{session_id}/")
 async def get_session(session_id: int) -> Dict[str, Any]:
     """Récupère les détails d'une session"""
     session = chat_manager.get_session(session_id)
@@ -41,12 +43,14 @@ async def get_session(session_id: int) -> Dict[str, Any]:
 
 
 @router.get("/character/{character_id}/sessions")
+@router.get("/character/{character_id}/sessions/")
 async def get_character_sessions(character_id: int, limit: int = 10) -> List[Dict[str, Any]]:
     """Récupère les sessions pour un personnage"""
     return chat_manager.get_character_sessions(character_id, limit)
 
 
 @router.post("/{session_id}/message")
+@router.post("/{session_id}/message/")
 async def send_message(session_id: int, message: MessageCreate) -> Dict[str, Any]:
     """Envoie un message dans la session et génère une réponse"""
     try:
@@ -59,6 +63,7 @@ async def send_message(session_id: int, message: MessageCreate) -> Dict[str, Any
 
 
 @router.get("/{session_id}/history")
+@router.get("/{session_id}/history/")
 async def get_session_history(session_id: int) -> Dict[str, Any]:
     """Récupère l'historique d'une session"""
     session = chat_manager.get_session(session_id)
@@ -68,6 +73,7 @@ async def get_session_history(session_id: int) -> Dict[str, Any]:
 
 
 @router.post("/{session_id}/end", status_code=200)
+@router.post("/{session_id}/end/", status_code=200)
 async def end_session(session_id: int) -> Dict[str, bool]:
     """Termine une session de chat"""
     success = chat_manager.end_session(session_id)
