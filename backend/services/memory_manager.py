@@ -6,6 +6,7 @@ import json
 import datetime
 import logging
 import time
+import re
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 import numpy as np
@@ -77,56 +78,70 @@ class MemoryManager:
 
     def _extract_facts(self, memory_id: int, character_id: int, content: str) -> List[int]:
         """Extrait des faits à partir du contenu d'une mémoire et les stocke"""
-        # Version améliorée d'extraction de faits
         facts = []
-        sentences = [s.strip() for s in content.split('.') if s.strip()]
+        # Découper le contenu en phrases
+        sentences = [s.strip()
+                     for s in re.split(r'[.!?]', content) if s.strip()]
 
-        # Motifs pour l'extraction de faits simples
+        # Normaliser le contenu pour faciliter l'extraction
+        content_normalized = content.lower()
+
+        # 1. EXTRACTION BASÉE SUR LES PATRONS DE PHRASE
+
+        # Patrons sujets pour les débuts de phrases
         subject_patterns = [
-            "Je", "Tu", "Il", "Elle", "Nous", "Vous", "Ils", "Elles",
-            "Mon", "Ton", "Son", "Notre", "Votre", "Leur"
+            "je", "tu", "il", "elle", "nous", "vous", "ils", "elles",
+            "mon", "ton", "son", "notre", "votre", "leur",
+            "ce personnage", "le personnage", "cette personne"
         ]
 
+        # Verbes d'action et d'état communs
+        action_verbs = [
+            "suis", "es", "est", "sommes", "êtes", "sont",  # être
+            "ai", "as", "a", "avons", "avez", "ont",        # avoir
+            "fais", "fait", "faisons", "faites", "font",    # faire
+            "vais", "vas", "va", "allons", "allez", "vont",  # aller
+            "veux", "veut", "voulons", "voulez", "veulent",  # vouloir
+            "peux", "peut", "pouvons", "pouvez", "peuvent",  # pouvoir
+            "sais", "sait", "savons", "savez", "savent",    # savoir
+            "dois", "doit", "devons", "devez", "doivent"    # devoir
+        ]
+
+        # Verbes d'état émotionnel et d'opinion
+        emotion_verbs = [
+            "aime", "adore", "déteste", "préfère", "apprécie", "hais",
+            "trouve", "pense", "crois", "considère", "ressens", "sens"
+        ]
+
+        # 2. EXTRACTION BASÉE SUR LES TYPES DE FAITS
+
         for sentence in sentences:
-            # Extraire des faits basés sur des modèles clés
-            words = sentence.split()
-            if len(words) < 3:
-                continue
+            sentence = sentence.strip().lower()
+            if len(sentence.split()) < 3:
+                continue  # Sauter les phrases trop courtes
 
-            # Extraction simple basée sur des modèles de phrase
-            for pattern in subject_patterns:
-                if sentence.startswith(pattern + " "):
-                    parts = sentence.split(' ', 2)
-                    if len(parts) >= 3:
-                        subject = parts[0]
-                        predicate = parts[1]
-                        object_part = parts[2] if len(parts) > 2 else ""
+            # 2.1 EXTRACTION DE PRÉFÉRENCES ET OPINIONS
 
-                        # Créer et stocker le fait
-                        fact = FactCreate(
-                            character_id=character_id,
-                            subject=subject,
-                            predicate=predicate,
-                            object=object_part,
-                            confidence=0.8,
-                            source_memory_id=memory_id
-                        )
+            # Format général: "X [verbe d'émotion] Y"
+            for verb in emotion_verbs:
+                if f" {verb} " in f" {sentence} ":
+                    parts = sentence.split(f" {verb} ", 1)
+                    if len(parts) == 2:
+                        subject = parts[0].strip()
+                        if not subject or subject == "":
+                            # Utiliser un sujet par défaut si non explicite
+                            for pronoun in ["je", "tu", "il", "elle"]:
+                                if sentence.startswith(pronoun):
+                                    subject = pronoun
+                                    break
+                            else:
+                                subject = "le personnage"
+                        object_part = parts[1].strip()
 
-                        fact_id = db_manager.insert("facts", fact.dict())
-                        facts.append(fact_id)
-                        break
-
-            # Extraction de faits sur des préférences
-            if "aime" in sentence or "adore" in sentence or "déteste" in sentence or "préfère" in sentence:
-                # Extraire des préférences simples
-                for verb in ["aime", "adore", "déteste", "préfère"]:
-                    if verb in sentence:
-                        parts = sentence.split(verb, 1)
-                        if len(parts) == 2:
-                            subject = parts[0].strip()
-                            if not subject:
-                                subject = "Le personnage"
-                            object_part = parts[1].strip()
+                        # Filtrer les objets trop courts ou non significatifs
+                        if len(object_part) > 1:
+                            confidence = 0.85 if any(pref in sentence for pref in [
+                                                     "vraiment", "beaucoup", "énormément", "tellement"]) else 0.7
 
                             # Créer et stocker le fait
                             fact = FactCreate(
@@ -134,21 +149,234 @@ class MemoryManager:
                                 subject=subject,
                                 predicate=verb,
                                 object=object_part,
-                                confidence=0.7,
+                                confidence=confidence,
                                 source_memory_id=memory_id
                             )
-
                             fact_id = db_manager.insert("facts", fact.dict())
                             facts.append(fact_id)
 
-        # Si des faits ont été extraits, les relier par une mémoire de synthèse
-        if facts and len(facts) > 1:
-            facts_summary = f"Faits extraits: {len(facts)} faits concernant {character_id}"
+            # 2.2 EXTRACTION D'ATTRIBUTS PERSONNELS
+
+            # Format: "Je suis X" ou "Tu es X" -> traits de personnalité/attributs
+            attribute_patterns = [
+                # Forte confiance
+                (r"(je|tu|il|elle) (suis|es|est) ([^.!?]+)", 0.9),
+                # Bonne confiance
+                (r"(je|tu|il|elle) (me|te|se) sens ([^.!?]+)", 0.8),
+                # Très forte confiance (identité)
+                (r"(mon|ton|son) (nom|prénom) est ([^.!?]+)", 0.95)
+            ]
+
+            for pattern, confidence in attribute_patterns:
+                matches = re.findall(pattern, sentence)
+                for match in matches:
+                    if len(match) >= 3:
+                        subject = match[0]
+                        predicate = match[1]
+                        attribute = match[2].strip()
+
+                        # Éviter les attributs vides ou trop courts
+                        if len(attribute) > 2:
+                            fact = FactCreate(
+                                character_id=character_id,
+                                subject=subject,
+                                predicate=predicate,
+                                object=attribute,
+                                confidence=confidence,
+                                source_memory_id=memory_id
+                            )
+                            fact_id = db_manager.insert("facts", fact.dict())
+                            facts.append(fact_id)
+
+            # 2.3 EXTRACTION DE RELATIONS ENTRE PERSONNES
+
+            # Format: relations familiales et personnelles
+            relation_patterns = [
+                (r"(mon|ton|son|notre|votre|leur) (père|mère|frère|sœur|ami|amie|parent|enfant|fils|fille) (est|s'appelle) ([^.!?]+)", 0.9),
+                (r"(je|tu|il|elle) (connais|connait) ([^.!?]+)", 0.7)
+            ]
+
+            for pattern, confidence in relation_patterns:
+                matches = re.findall(pattern, sentence)
+                for match in matches:
+                    if len(match) >= 4:  # Pour le premier pattern
+                        possessive = match[0]
+                        relation_type = match[1]
+                        predicate = match[2]
+                        person = match[3].strip()
+
+                        if len(person) > 2:
+                            # Sujet déduit du possessif
+                            subject_map = {"mon": "je", "ton": "tu", "son": "il/elle",
+                                           "notre": "nous", "votre": "vous", "leur": "ils/elles"}
+                            subject = subject_map.get(
+                                possessive, "le personnage")
+
+                            fact = FactCreate(
+                                character_id=character_id,
+                                subject=subject,
+                                predicate=f"a comme {relation_type}",
+                                object=person,
+                                confidence=confidence,
+                                source_memory_id=memory_id
+                            )
+                            fact_id = db_manager.insert("facts", fact.dict())
+                            facts.append(fact_id)
+                    elif len(match) >= 3:  # Pour le second pattern
+                        subject = match[0]
+                        predicate = match[1]
+                        person = match[2].strip()
+
+                        if len(person) > 2:
+                            fact = FactCreate(
+                                character_id=character_id,
+                                subject=subject,
+                                predicate=predicate,
+                                object=person,
+                                confidence=confidence,
+                                source_memory_id=memory_id
+                            )
+                            fact_id = db_manager.insert("facts", fact.dict())
+                            facts.append(fact_id)
+
+            # 2.4 EXTRACTION DE LOCALISATION
+
+            # Format: "X est à/dans/sur Y"
+            location_patterns = [
+                r"(je|tu|il|elle|nous|vous|ils|elles) (suis|es|est|sommes|êtes|sont) (à|dans|sur|près de|au|en) ([^.!?]+)",
+                r"(je|tu|il|elle|nous|vous|ils|elles) (habite|habites|habitons|habitez|habitent|vis|vit|vivons|vivez|vivent) (à|dans|sur|près de|au|en) ([^.!?]+)"
+            ]
+
+            for pattern in location_patterns:
+                matches = re.findall(pattern, sentence)
+                for match in matches:
+                    if len(match) >= 4:
+                        subject = match[0]
+                        verb = match[1]
+                        preposition = match[2]
+                        location = match[3].strip()
+
+                        if len(location) > 2:
+                            fact = FactCreate(
+                                character_id=character_id,
+                                subject=subject,
+                                predicate=f"{verb} {preposition}",
+                                object=location,
+                                confidence=0.85,
+                                source_memory_id=memory_id
+                            )
+                            fact_id = db_manager.insert("facts", fact.dict())
+                            facts.append(fact_id)
+
+            # 2.5 EXTRACTION D'ACTIONS ET ÉVÉNEMENTS
+
+            # Format simple: "X [verbe d'action] Y"
+            for word in sentence.split():
+                if word in action_verbs:
+                    parts = sentence.split(word, 1)
+                    if len(parts) == 2 and parts[0] and parts[1]:
+                        subject = parts[0].strip()
+                        # Vérifier si le sujet ressemble à un sujet valide
+                        if any(subject.endswith(pat) for pat in ["je", "tu", "il", "elle", "on"]):
+                            object_action = parts[1].strip()
+                            if len(object_action) > 3:
+                                fact = FactCreate(
+                                    character_id=character_id,
+                                    subject=subject,
+                                    predicate=word,
+                                    object=object_action,
+                                    confidence=0.6,  # Confiance plus basse car extraction plus générique
+                                    source_memory_id=memory_id
+                                )
+                                fact_id = db_manager.insert(
+                                    "facts", fact.dict())
+                                facts.append(fact_id)
+
+            # 2.6 EXTRACTION DE TEMPORALITÉ
+
+            # Dates et références temporelles
+            time_patterns = [
+                r"(en|le|la|l'année|au mois de) (\d{4}|\d{1,2} [a-zéèêà]+ \d{4}|[a-zéèêà]+ \d{4})",
+                r"(hier|aujourd'hui|demain|ce matin|ce soir|cette nuit)"
+            ]
+
+            for pattern in time_patterns:
+                matches = re.findall(pattern, sentence)
+                if matches:
+                    for match in matches:
+                        if isinstance(match, tuple):
+                            time_ref = " ".join(match).strip()
+                        else:
+                            time_ref = match.strip()
+
+                        if "je" in sentence[:10] or "tu" in sentence[:10]:
+                            subject = "je" if "je" in sentence[:10] else "tu"
+                            # Extraire le reste de la phrase comme action
+                            action = sentence.replace(time_ref, "").strip()
+                            if len(action) > 10:  # Action suffisamment significative
+                                fact = FactCreate(
+                                    character_id=character_id,
+                                    subject=subject,
+                                    predicate=f"à {time_ref}",
+                                    object=action,
+                                    confidence=0.75,
+                                    source_memory_id=memory_id
+                                )
+                                fact_id = db_manager.insert(
+                                    "facts", fact.dict())
+                                facts.append(fact_id)
+
+        # 3. ANALYSES GLOBALES SUR LE CONTENU ENTIER
+
+        # 3.1 EXTRACTION D'HUMEUR GÉNÉRALE
+
+        # Détecter l'humeur à partir de marqueurs émotionnels
+        positive_markers = ["heureux", "content", "joyeux", "ravi",
+                            "enchanté", "aime", "adore", "super", "bien", "excellent"]
+        negative_markers = ["triste", "malheureux", "déprimé", "fâché",
+                            "en colère", "irrité", "déteste", "hais", "mal", "terrible"]
+
+        positive_count = sum(content_normalized.count(marker)
+                             for marker in positive_markers)
+        negative_count = sum(content_normalized.count(marker)
+                             for marker in negative_markers)
+
+        if positive_count > 2 or negative_count > 2:
+            mood = "positive" if positive_count > negative_count else "negative"
+            intensity = min(
+                1.0, max(0.6, (positive_count + negative_count) / 10))
+
+            fact = FactCreate(
+                character_id=character_id,
+                subject="humeur",
+                predicate="est",
+                object=mood,
+                confidence=intensity,
+                source_memory_id=memory_id
+            )
+            fact_id = db_manager.insert("facts", fact.dict())
+            facts.append(fact_id)
+
+        # Si des faits ont été extraits, créer une mémoire de synthèse
+        if facts:
+            facts_categories = {}
+            for fact_id in facts:
+                fact = db_manager.get_by_id("facts", fact_id)
+                category = fact.get("predicate", "").split()[0]
+                facts_categories[category] = facts_categories.get(
+                    category, 0) + 1
+
+            facts_summary = f"Extraction de {len(facts)} faits: " + ", ".join(
+                [f"{count} sur {cat}" for cat, count in facts_categories.items()])
+
+            # Importance basée sur le nombre de faits extraits
+            importance = min(0.9, max(0.3, len(facts) / 20))
+
             linked_memory = MemoryCreate(
                 character_id=character_id,
                 type="facts_extraction",
                 content=facts_summary,
-                importance=0.5,
+                importance=importance,
                 metadata={"source_memory_id": memory_id, "fact_ids": facts}
             )
             self.create_memory(linked_memory)
