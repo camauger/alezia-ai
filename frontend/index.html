@@ -12,6 +12,22 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- Overlay de chargement -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="loading-content">
+                <i class="fas fa-spinner fa-spin fa-3x"></i>
+                <p>Chargement d'Alezia AI...</p>
+                <div class="loading-status">
+                    <div id="loading-api-status" class="loading-item">
+                        <i class="fas fa-circle offline"></i> Connexion à l'API...
+                    </div>
+                    <div id="loading-llm-status" class="loading-item">
+                        <i class="fas fa-circle offline"></i> Chargement du modèle AI...
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- En-tête -->
         <header class="app-header">
             <div class="logo">
@@ -141,6 +157,6 @@
 
     <!-- Scripts -->
     <script src="assets/js/api.js"></script>
-    <script type="module" src="assets/js/main.js"></script>
+    <script src="assets/js/main.js"></script>
 </body>
 </html>
