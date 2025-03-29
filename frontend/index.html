@@ -4,11 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alezia AI - Système de JDR avec IA</title>
+    <!-- Styles et scripts externes -->
     <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Ajout de Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Intégration de FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- Polyfills pour les navigateurs plus anciens -->
+    <script>
+        if (!('AbortSignal' in window) || !('timeout' in AbortSignal)) {
+            AbortSignal.timeout = function timeout(ms) {
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), ms);
+                return controller.signal;
+            };
+        }
+    </script>
 </head>
 <body>
     <div class="app-container">

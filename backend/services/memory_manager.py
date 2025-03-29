@@ -57,6 +57,10 @@ class MemoryManager:
         """Crée une nouvelle mémoire pour un personnage"""
         memory_dict = memory.dict()
 
+        # Ajouter la date de création et initialiser les champs obligatoires
+        memory_dict["created_at"] = datetime.datetime.now()
+        memory_dict["access_count"] = 0
+
         # Générer l'embedding pour le contenu de la mémoire
         if self.embedding_model:
             embedding = self.embedding_model.encode(memory.content).tolist()
