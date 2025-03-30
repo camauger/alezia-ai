@@ -62,6 +62,11 @@ class MemoryManager:
         memory_dict["created_at"] = datetime.datetime.now()
         memory_dict["access_count"] = 0
 
+        # Calculer l'importance si elle n'est pas explicitement définie
+        if memory.importance == 1.0:  # Valeur par défaut
+            memory_dict["importance"] = self._calculate_memory_importance(
+                memory.content, memory.type)
+
         # Générer l'embedding pour le contenu de la mémoire
         if self.embedding_model:
             embedding = self.embedding_model.encode(memory.content).tolist()
@@ -75,6 +80,97 @@ class MemoryManager:
             self._extract_facts(memory_id, memory.character_id, memory.content)
 
         return memory_id
+
+    def _calculate_memory_importance(self, content: str, memory_type: str) -> float:
+        """Calcule l'importance d'une mémoire en analysant son contenu
+
+        Retourne une valeur entre 0.2 (peu important) et 9.0 (très important)
+        """
+        content_lower = content.lower()
+        base_importance = 1.0  # Importance par défaut
+
+        # 1. Ajustement selon le type de mémoire
+        type_weights = {
+            "conversation": 1.0,
+            "event": 1.5,         # Les événements sont généralement plus importants
+            "observation": 0.8,   # Les observations sont souvent moins importantes
+            "thought": 0.9,       # Les pensées sont modérément importantes
+            "facts_extraction": 1.2,  # Les faits extraits ont une importance accrue
+            "user_message": 1.3,   # Les messages de l'utilisateur sont plus importants
+            "character_message": 1.0  # Les réponses du personnage ont une importance standard
+        }
+
+        importance_multiplier = type_weights.get(memory_type, 1.0)
+
+        # 2. Analyse du contenu pour indicateurs d'importance
+
+        # Mots-clés indiquant une information importante
+        important_markers = [
+            "important", "crucial", "essentiel", "clé", "vital", "critique",
+            "toujours", "jamais", "adore", "déteste", "aime", "hais",
+            "secret", "confidential", "promesse", "jure", "avoue",
+            "révèle", "découvre", "explique", "comprend", "réalise",
+            "première fois", "dernier", "meilleur", "pire"
+        ]
+
+        # Expressions temporelles dénotant l'importance
+        temporal_markers = [
+            "hier", "aujourd'hui", "demain", "maintenant", "immédiatement",
+            "plus jamais", "toujours", "tous les jours"
+        ]
+
+        # Indicateurs émotionnels forts
+        emotion_markers = [
+            "heureux", "triste", "furieux", "effrayé", "excité", "nerveux",
+            "angoissé", "terrifié", "ravi", "extatique", "traumatisé",
+            "choqué", "surpris", "ému", "frustré", "énervé", "déçu",
+            "fier", "honteux", "coupable", "embarrassé"
+        ]
+
+        # Informations personnelles ou identitaires
+        identity_markers = [
+            "mon nom", "je m'appelle", "je suis", "ma ville", "mon âge",
+            "mon adresse", "mon travail", "ma famille", "mes enfants",
+            "mon père", "ma mère", "mon frère", "ma sœur", "ma date de naissance"
+        ]
+
+        # Calculer les scores en fonction du nombre d'occurrences
+        important_score = sum(content_lower.count(marker)
+                              for marker in important_markers) * 0.5
+        temporal_score = sum(content_lower.count(marker)
+                             for marker in temporal_markers) * 0.3
+        emotion_score = sum(content_lower.count(marker)
+                            for marker in emotion_markers) * 0.4
+        identity_score = sum(content_lower.count(marker)
+                             for marker in identity_markers) * 0.7
+
+        # 3. Analyse des structures grammaticales
+        # Compter les questions (suggérant une demande d'information importante)
+        question_count = content.count('?') * 0.4
+
+        # Compter les exclamations (suggérant une émotion forte)
+        exclamation_count = content.count('!') * 0.3
+
+        # 4. Complexité et détail (longueur et richesse du texte)
+        word_count = len(content_lower.split())
+        # Bonus pour les contenus détaillés mais pas trop longs
+        complexity_score = min(1.0, word_count / 100) * 0.5
+
+        # 5. Calculer l'importance finale
+        total_score = base_importance
+        total_score += important_score
+        total_score += temporal_score
+        total_score += emotion_score
+        total_score += identity_score
+        total_score += question_count
+        total_score += exclamation_count
+        total_score += complexity_score
+
+        # Appliquer le multiplicateur de type
+        total_score *= importance_multiplier
+
+        # Limiter l'importance entre 0.2 et 9.0
+        return min(9.0, max(0.2, total_score))
 
     def _extract_facts(self, memory_id: int, character_id: int, content: str) -> List[int]:
         """Extrait des faits à partir du contenu d'une mémoire et les stocke"""
@@ -398,6 +494,16 @@ class MemoryManager:
                 "last_accessed": datetime.datetime.now(),
                 "access_count": memory["access_count"] + 1
             }
+
+            # Ajuster l'importance en fonction du nombre d'accès
+            # Les mémoires fréquemment consultées gagnent en importance
+            if memory["access_count"] > 5:
+                current_importance = memory["importance"]
+                # Augmenter progressivement l'importance, sans dépasser 9.0
+                new_importance = min(
+                    9.0, current_importance * (1 + 0.05 * (memory["access_count"] // 5)))
+                update_data["importance"] = new_importance
+
             db_manager.update("memories", update_data, "id = ?", (memory_id,))
             return Memory(**memory)
         return None
@@ -407,9 +513,21 @@ class MemoryManager:
         character_id: int,
         query: str,
         limit: int = 5,
-        recency_weight: float = 0.3
+        recency_weight: float = 0.3,
+        importance_weight: float = 0.4
     ) -> List[RetrievedMemory]:
-        """Récupère les mémoires les plus pertinentes pour une requête"""
+        """Récupère les mémoires les plus pertinentes pour une requête
+
+        Args:
+            character_id: ID du personnage
+            query: Texte de la requête pour trouver des mémoires similaires
+            limit: Nombre maximum de mémoires à retourner
+            recency_weight: Poids accordé à la récence (0.0 - 1.0)
+            importance_weight: Poids accordé à l'importance (0.0 - 1.0)
+
+        Returns:
+            Liste de mémoires pertinentes avec leur score de pertinence
+        """
         if not self.embedding_model:
             logger.warning(
                 "Modèle d'embeddings non disponible, impossible de rechercher des mémoires pertinentes")
@@ -424,30 +542,46 @@ class MemoryManager:
         if not memories:
             return []
 
-        # Calculer la pertinence (similarité cosinus) et la récence pour chaque mémoire
+        # Calculer les métriques pour chaque mémoire
         results = []
+        now = datetime.datetime.now()
 
         for memory in memories:
             if not memory.embedding:
                 continue
 
-            # Calculer la similarité cosinus
+            # 1. Similarité sémantique (similarité cosinus)
             similarity = self._cosine_similarity(
                 query_embedding, memory.embedding)
 
-            # Calculer le score de récence (plus récent = plus élevé)
-            age_in_days = (datetime.datetime.now() - memory.created_at).days
-            recency_score = max(0, 1 - (age_in_days / 365)
-                                )  # Normaliser sur un an
+            # 2. Récence (valeur normalisée)
+            age_in_days = (now - memory.created_at).days
+            max_age = 365  # Normaliser sur un an
+            recency_score = max(0, 1 - (age_in_days / max_age))
 
-            # Score combiné
-            combined_score = (1 - recency_weight) * \
-                similarity + recency_weight * recency_score
+            # 3. Importance de la mémoire (normalisée sur 0-1)
+            importance_score = memory.importance / 10.0
 
+            # 4. Fréquence d'accès (bonus pour les mémoires consultées)
+            access_factor = min(1.0, memory.access_count / 20.0) * 0.2
+
+            # Calculer le score combiné avec les différents facteurs pondérés
+            # Le poids de la similarité est calculé pour que tous les poids = 1.0
+            similarity_weight = 1.0 - recency_weight - importance_weight
+
+            combined_score = (
+                similarity_weight * similarity +      # Pertinence sémantique
+                recency_weight * recency_score +      # Récence de la mémoire
+                importance_weight * importance_score  # Importance intrinsèque
+            ) * (1 + access_factor)                   # Bonus pour accès fréquent
+
+            # Stocker les résultats avec tous les scores individuels
             results.append({
                 **memory.dict(),
                 "relevance": similarity,
                 "recency": recency_score,
+                "importance_score": importance_score,
+                "access_factor": access_factor,
                 "combined_score": combined_score
             })
 
@@ -455,15 +589,48 @@ class MemoryManager:
         results.sort(key=lambda x: x["combined_score"], reverse=True)
         top_results = results[:limit]
 
-        # Mettre à jour le compteur d'accès pour ces mémoires
+        # Mettre à jour le compteur d'accès et éventuellement réévaluer l'importance
         for result in top_results:
-            update_data = {
-                "last_accessed": datetime.datetime.now(),
-                "access_count": result["access_count"] + 1
-            }
-            db_manager.update("memories", update_data,
-                              "id = ?", (result["id"],))
+            memory_id = result["id"]
 
+            # Incrémenter le compteur d'accès
+            new_access_count = result["access_count"] + 1
+
+            # Mettre à jour la date de dernier accès et le compteur
+            update_data = {
+                "last_accessed": now,
+                "access_count": new_access_count
+            }
+
+            # Périodiquement, réévaluer l'importance des mémoires fréquemment accédées
+            if new_access_count % 10 == 0:  # Toutes les 10 consultations
+                try:
+                    # Réévaluer l'importance en fonction du contenu
+                    recalculated_importance = self._calculate_memory_importance(
+                        result["content"], result["type"]
+                    )
+
+                    # Moyenner avec l'importance actuelle pour éviter les changements brusques
+                    current_importance = result["importance"]
+                    adjusted_importance = (
+                        current_importance + recalculated_importance) / 2
+
+                    # Ajouter un bonus pour les mémoires fréquemment consultées
+                    access_bonus = min(1.5, new_access_count / 20)
+
+                    # Mettre à jour l'importance finale
+                    update_data["importance"] = min(
+                        9.0, adjusted_importance * (1 + access_bonus * 0.1))
+
+                    logger.info(f"Réévaluation de l'importance de la mémoire {memory_id}: "
+                                f"{current_importance} -> {update_data['importance']}")
+                except Exception as e:
+                    logger.error(
+                        f"Erreur lors de la réévaluation de l'importance: {e}")
+
+            db_manager.update("memories", update_data, "id = ?", (memory_id,))
+
+        # Construire les objets RetrievedMemory à partir des résultats
         return [RetrievedMemory(**result) for result in top_results]
 
     def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
@@ -509,6 +676,206 @@ class MemoryManager:
         rows_updated = db_manager.update(
             "memories", update_data, "id = ?", (memory_id,))
         return rows_updated > 0
+
+    def decay_old_memories(self, character_id: int, days_threshold: int = 90) -> int:
+        """Diminue progressivement l'importance des mémoires anciennes
+
+        Les mémoires plus anciennes qu'un certain seuil voient leur importance diminuer,
+        sauf si elles sont particulièrement importantes ou fréquemment consultées.
+
+        Args:
+            character_id: ID du personnage dont les mémoires seront dégradées
+            days_threshold: Âge en jours à partir duquel les mémoires commencent à être dégradées
+
+        Returns:
+            Le nombre de mémoires dont l'importance a été mise à jour
+        """
+        now = datetime.datetime.now()
+        cutoff_date = now - datetime.timedelta(days=days_threshold)
+
+        # Récupérer les mémoires anciennes peu consultées
+        query = """
+            SELECT * FROM memories
+            WHERE character_id = ?
+            AND created_at < ?
+            AND (last_accessed IS NULL OR last_accessed < ?)
+            AND access_count < 5
+        """
+        old_memories = db_manager.execute_query(
+            query,
+            (character_id, cutoff_date, cutoff_date)
+        )
+
+        updated_count = 0
+
+        for memory in old_memories:
+            # Ne pas dégrader les mémoires très importantes (>7.0)
+            if memory["importance"] > 7.0:
+                continue
+
+            # Calculer le facteur de dégradation basé sur l'âge
+            age_in_days = (now - memory["created_at"]).days
+            decay_factor = 1.0 - min(0.5, (age_in_days - days_threshold) / 365)
+
+            # Appliquer une dégradation plus forte pour les mémoires jamais consultées
+            if memory["access_count"] == 0:
+                decay_factor *= 0.8
+
+            # Calculer la nouvelle importance
+            # Plus l'importance actuelle est élevée, plus la dégradation est lente
+            current_importance = memory["importance"]
+            importance_resistance = min(0.8, current_importance / 10.0)
+            new_importance = max(0.1, current_importance *
+                                 (decay_factor + importance_resistance) / 2)
+
+            # Ne mettre à jour que si la différence est significative
+            if abs(new_importance - current_importance) > 0.2:
+                update_data = {"importance": new_importance}
+                db_manager.update("memories", update_data,
+                                  "id = ?", (memory["id"],))
+                updated_count += 1
+
+                logger.debug(
+                    f"Dégradation de mémoire {memory['id']}: {current_importance:.2f} -> {new_importance:.2f}")
+
+        if updated_count > 0:
+            logger.info(
+                f"Dégradation de {updated_count} mémoires anciennes pour le personnage {character_id}")
+
+        return updated_count
+
+    def consolidate_memories(self, character_id: int, similarity_threshold: float = 0.85) -> int:
+        """Consolide les mémoires similaires pour éviter la redondance
+
+        Recherche des mémoires sémantiquement similaires et les fusionne en conservant
+        la plus importante, tout en augmentant son importance pour refléter la répétition.
+
+        Args:
+            character_id: ID du personnage dont les mémoires seront consolidées
+            similarity_threshold: Seuil de similarité au-delà duquel les mémoires sont considérées comme similaires
+
+        Returns:
+            Le nombre de mémoires consolidées (supprimées car redondantes)
+        """
+        if not self.embedding_model:
+            logger.warning(
+                "Modèle d'embeddings non disponible, impossible de consolider les mémoires")
+            return 0
+
+        # Récupérer toutes les mémoires du personnage
+        memories = self.get_memories(character_id, limit=500)
+
+        if len(memories) < 5:  # Pas assez de mémoires pour justifier une consolidation
+            return 0
+
+        consolidated_count = 0
+        processed_ids = set()
+
+        # Comparer chaque paire de mémoires
+        for i, memory1 in enumerate(memories):
+            if memory1.id in processed_ids:
+                continue
+
+            # Passer aux mémoires suivantes
+            for j in range(i+1, len(memories)):
+                memory2 = memories[j]
+
+                if memory2.id in processed_ids:
+                    continue
+
+                # Vérifier si les deux mémoires sont du même type
+                if memory1.type != memory2.type:
+                    continue
+
+                # Calculer la similarité sémantique
+                if memory1.embedding and memory2.embedding:
+                    similarity = self._cosine_similarity(
+                        memory1.embedding, memory2.embedding)
+
+                    # Si les mémoires sont très similaires
+                    if similarity > similarity_threshold:
+                        # Déterminer quelle mémoire conserver (la plus importante ou la plus récente)
+                        keep_memory, discard_memory = (
+                            (memory1, memory2) if memory1.importance > memory2.importance or
+                            (memory1.importance ==
+                             memory2.importance and memory1.created_at > memory2.created_at)
+                            else (memory2, memory1)
+                        )
+
+                        # Augmenter l'importance de la mémoire conservée
+                        new_importance = min(9.0, keep_memory.importance * 1.2)
+
+                        # Mettre à jour la mémoire conservée
+                        update_data = {
+                            "importance": new_importance,
+                            "metadata": {
+                                **keep_memory.metadata,
+                                "consolidated_with": discard_memory.id,
+                                "consolidation_date": datetime.datetime.now().isoformat(),
+                                "similarity_score": similarity
+                            }
+                        }
+
+                        db_manager.update(
+                            "memories", update_data, "id = ?", (keep_memory.id,))
+
+                        # Supprimer la mémoire redondante
+                        self.delete_memory(discard_memory.id)
+
+                        processed_ids.add(discard_memory.id)
+                        consolidated_count += 1
+
+                        logger.info(f"Mémoires consolidées: {discard_memory.id} fusionnée dans {keep_memory.id} "
+                                    f"(similarité: {similarity:.2f})")
+
+        if consolidated_count > 0:
+            logger.info(
+                f"Consolidation terminée: {consolidated_count} mémoires fusionnées pour le personnage {character_id}")
+
+        return consolidated_count
+
+    def maintenance_cycle(self, character_id: int) -> Dict[str, int]:
+        """Exécute un cycle complet de maintenance sur les mémoires d'un personnage
+
+        Combine la dégradation des mémoires anciennes et la consolidation des mémoires similaires.
+        Cette méthode est conçue pour être exécutée périodiquement (par exemple, une fois par jour).
+
+        Args:
+            character_id: ID du personnage dont les mémoires doivent être maintenues
+
+        Returns:
+            Dictionnaire contenant les statistiques du cycle de maintenance
+        """
+        stats = {}
+
+        try:
+            # 1. Dégradation des mémoires anciennes
+            decay_count = self.decay_old_memories(character_id)
+            stats["decayed_memories"] = decay_count
+
+            # 2. Consolidation des mémoires similaires
+            if decay_count > 0:  # Ne consolider que s'il y a des mémoires à maintenir
+                consolidation_count = self.consolidate_memories(character_id)
+                stats["consolidated_memories"] = consolidation_count
+            else:
+                stats["consolidated_memories"] = 0
+
+            # 3. Nettoyage des mémoires de très faible importance (optionnel)
+            query = "SELECT COUNT(*) as count FROM memories WHERE character_id = ? AND importance < 0.3"
+            low_importance = db_manager.execute_query(
+                query, (character_id,))[0]["count"]
+            stats["low_importance_memories"] = low_importance
+
+            logger.info(f"Cycle de maintenance terminé pour le personnage {character_id}: "
+                        f"{decay_count} dégradées, {stats['consolidated_memories']} consolidées, "
+                        f"{low_importance} de faible importance")
+
+        except Exception as e:
+            logger.error(
+                f"Erreur lors du cycle de maintenance pour le personnage {character_id}: {e}")
+            stats["error"] = str(e)
+
+        return stats
 
 
 class MockEmbeddingModel:
