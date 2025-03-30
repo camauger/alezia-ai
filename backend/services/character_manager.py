@@ -7,10 +7,10 @@ import datetime
 import json
 from typing import List, Dict, Any, Optional, Tuple
 
-from utils.db import db_manager
-from models.character import Character, CharacterCreate, CharacterSummary, CharacterState
-from models.character import CharacterTrait, PersonalityTraits, TraitChange
-from models.relationship import Relationship, RelationshipCreate, UserCharacterRelationship
+from backend.utils.db import db_manager
+from backend.models.character import Character, CharacterCreate, CharacterSummary, CharacterState
+from backend.models.character import CharacterTrait, PersonalityTraits, TraitChange
+from backend.models.relationship import Relationship, RelationshipCreate, UserCharacterRelationship
 from .memory_manager import memory_manager
 
 logger = logging.getLogger(__name__)

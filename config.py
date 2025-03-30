@@ -41,9 +41,11 @@ LLM_CONFIG = {
 
 # Configuration des embeddings
 EMBEDDING_CONFIG = {
-    "model": os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
+    "model_name": os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
     "dimensions": int(os.environ.get("EMBEDDING_DIMENSIONS", "384")),
-    "mock_mode": os.environ.get("EMBEDDING_MOCK_MODE", "True").lower() in ("true", "1", "t")
+    "mock_mode": os.environ.get("EMBEDDING_MOCK_MODE", "True").lower() in ("true", "1", "t"),
+    "cache_dir": DATA_DIR / "embeddings",
+    "use_gpu": os.environ.get("EMBEDDING_USE_GPU", "False").lower() in ("true", "1", "t")
 }
 
 # Configuration de la base de données

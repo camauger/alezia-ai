@@ -7,9 +7,9 @@ from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, Path, Query, Depends, Body
 from pydantic import BaseModel, Field
 
-from models.character import Character, CharacterSummary, CharacterCreate, CharacterState
-from models.character import CharacterTrait, PersonalityTraits, TraitChange
-from services.character_manager import CharacterManager
+from backend.models.character import Character, CharacterSummary, CharacterCreate, CharacterState
+from backend.models.character import CharacterTrait, PersonalityTraits, TraitChange
+from backend.services.character_manager import CharacterManager
 
 router = APIRouter(prefix="/characters", tags=["Characters"])
 logger = logging.getLogger(__name__)

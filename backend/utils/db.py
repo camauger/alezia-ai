@@ -12,7 +12,7 @@ from time import sleep
 import logging
 
 # Utilisation d'un import absolu au lieu d'un import relatif
-from config import DB_PATH
+from backend.config import DB_PATH
 
 logger = logging.getLogger(__name__)
 

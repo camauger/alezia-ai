@@ -9,10 +9,10 @@ import time
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-from services.llm_service import llm_service
-from services.character_manager import CharacterManager
-from services.memory_manager import MemoryManager
-from utils.db import db_manager
+from backend.services.llm_service import llm_service
+from backend.services.character_manager import CharacterManager
+from backend.services.memory_manager import MemoryManager
+from backend.utils.db import db_manager
 
 logger = logging.getLogger(__name__)
 
