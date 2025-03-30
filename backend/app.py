@@ -5,6 +5,7 @@ Point d'entrée principal de l'API pour le système de JDR avec IA
 from routes.system import router as system_router
 from routes.characters import router as characters_router
 from routes.chat import router as chat_router
+from routes.memory import router as memory_router
 from utils.errors import configure_exception_handlers
 from utils.logging_config import setup_logging, configure_http_logging
 from config import API_CONFIG, SECURITY_CONFIG
@@ -55,6 +56,7 @@ configure_exception_handlers(app)
 app.include_router(characters_router)
 app.include_router(system_router)
 app.include_router(chat_router)
+app.include_router(memory_router)
 
 # Routes de base
 

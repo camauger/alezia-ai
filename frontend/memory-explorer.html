@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alezia AI - Explorateur de mémoires</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <link rel="stylesheet" href="assets/css/memory-explorer.css">
+    <script src="assets/js/api.js" defer></script>
+    <script src="assets/js/memory-api.js" defer></script>
+    <script src="assets/js/memory-explorer.js" defer></script>
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-content">
+            <a href="index.html" class="logo">
+                <h1>Alezia AI</h1>
+            </a>
+            <nav>
+                <ul class="main-nav">
+                    <li><a href="index.html">Accueil</a></li>
+                    <li><a href="characters.html">Personnages</a></li>
+                    <li><a href="chat.html">Conversation</a></li>
+                    <li><a href="memory-explorer.html" class="active">Mémoires</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="page-section">
+            <h2>Explorateur de mémoires et faits extraits</h2>
+            <p class="section-description">
+                Visualisez et gérez les mémoires et les faits extraits pour chaque personnage.
+                Utilisez les contrôles ci-dessous pour filtrer et rechercher des mémoires spécifiques.
+            </p>
+
+            <div class="character-selector-container">
+                <label for="character-selector">Sélectionnez un personnage :</label>
+                <select id="character-selector">
+                    <option value="">Choisir un personnage...</option>
+                    <!-- Options ajoutées dynamiquement -->
+                </select>
+            </div>
+
+            <div id="memory-explorer-container">
+                <!-- L'explorateur de mémoires sera inséré ici -->
+                <div class="placeholder-message">
+                    Veuillez sélectionner un personnage pour voir ses mémoires.
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2023 Alezia AI - Système de JDR avec IA</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Récupérer les personnages
+            try {
+                const characters = await window.aleziaAPI.getCharacters();
+                const characterSelector = document.getElementById('character-selector');
+                const explorerContainer = document.getElementById('memory-explorer-container');
+
+                // Remplir le sélecteur de personnages
+                characters.forEach(character => {
+                    const option = document.createElement('option');
+                    option.value = character.id;
+                    option.textContent = character.name;
+                    characterSelector.appendChild(option);
+                });
+
+                // Événement de sélection de personnage
+                characterSelector.addEventListener('change', async function() {
+                    const characterId = parseInt(this.value);
+
+                    if (!characterId) {
+                        explorerContainer.innerHTML = `
+                            <div class="placeholder-message">
+                                Veuillez sélectionner un personnage pour voir ses mémoires.
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Afficher un message de chargement
+                    explorerContainer.innerHTML = `
+                        <div class="loading-message">
+                            Chargement des mémoires du personnage...
+                        </div>
+                    `;
+
+                    try {
+                        // Initialiser l'explorateur de mémoires
+                        await window.memoryExplorer.initialize(characterId, explorerContainer);
+                    } catch (error) {
+                        console.error('Erreur lors de l\'initialisation de l\'explorateur:', error);
+                        explorerContainer.innerHTML = `
+                            <div class="error-message">
+                                Une erreur est survenue lors du chargement des mémoires.
+                                <button id="retry-button">Réessayer</button>
+                            </div>
+                        `;
+
+                        document.getElementById('retry-button').addEventListener('click', function() {
+                            characterSelector.dispatchEvent(new Event('change'));
+                        });
+                    }
+                });
+
+                // Vérifier si un personnage est spécifié dans l'URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const characterIdParam = urlParams.get('character_id');
+
+                if (characterIdParam) {
+                    characterSelector.value = characterIdParam;
+                    characterSelector.dispatchEvent(new Event('change'));
+                }
+
+            } catch (error) {
+                console.error('Erreur lors de la récupération des personnages:', error);
+                document.getElementById('memory-explorer-container').innerHTML = `
+                    <div class="error-message">
+                        Impossible de charger la liste des personnages. Veuillez réessayer plus tard.
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>
