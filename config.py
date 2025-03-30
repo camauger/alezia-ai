@@ -4,17 +4,18 @@ Configuration globale de l'application
 
 import os
 import json
+from pathlib import Path
 from typing import Dict, Any
 
 # Port du serveur API
 API_PORT = int(os.environ.get("API_PORT", 8000))
 
 # Configuration des chemins
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(ROOT_DIR, "data")
-DB_PATH = os.path.join(DATA_DIR, "alezia.db")
-MEDIA_DIR = os.path.join(ROOT_DIR, "media")
-AVATAR_DIR = os.path.join(MEDIA_DIR, "avatars")
+ROOT_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = ROOT_DIR / "data"
+DB_PATH = DATA_DIR / "alezia.db"
+MEDIA_DIR = ROOT_DIR / "media"
+AVATAR_DIR = MEDIA_DIR / "avatars"
 
 # Créer les répertoires s'ils n'existent pas
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -38,6 +39,13 @@ LLM_CONFIG = {
     "max_tokens": int(os.environ.get("LLM_MAX_TOKENS", "1024"))
 }
 
+# Configuration des embeddings
+EMBEDDING_CONFIG = {
+    "model": os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
+    "dimensions": int(os.environ.get("EMBEDDING_DIMENSIONS", "384")),
+    "mock_mode": os.environ.get("EMBEDDING_MOCK_MODE", "True").lower() in ("true", "1", "t")
+}
+
 # Configuration de la base de données
 DB_CONFIG = {
     "db_path": DB_PATH,
@@ -46,7 +54,7 @@ DB_CONFIG = {
 
 # Configuration de la mémoire
 MEMORY_CONFIG = {
-    "vector_db_path": os.path.join(DATA_DIR, "vector_db"),
+    "vector_db_path": DATA_DIR / "vector_db",
     "extraction_threshold": float(os.environ.get("EXTRACTION_THRESHOLD", "0.6")),
     "similarity_threshold": float(os.environ.get("SIMILARITY_THRESHOLD", "0.7")),
     "max_relevant_memories": int(os.environ.get("MAX_RELEVANT_MEMORIES", "5")),
@@ -82,7 +90,7 @@ LOG_CONFIG = {
             "class": "logging.FileHandler",
             "level": "INFO",
             "formatter": "standard",
-            "filename": os.path.join(DATA_DIR, "alezia.log"),
+            "filename": str(DATA_DIR / "alezia.log"),
             "encoding": "utf8"
         }
     },
@@ -96,7 +104,7 @@ LOG_CONFIG = {
 }
 
 # Écrire le fichier api_port.txt pour le frontend
-with open(os.path.join(ROOT_DIR, "frontend", "api_port.txt"), "w") as f:
+with open(str(ROOT_DIR / "frontend" / "api_port.txt"), "w") as f:
     f.write(str(API_PORT))
 
 
@@ -116,6 +124,7 @@ def get_config() -> Dict[str, Any]:
         "avatar_dir": AVATAR_DIR,
         "cors_origins": CORS_ORIGINS,
         "llm_config": LLM_CONFIG,
+        "embedding_config": EMBEDDING_CONFIG,
         "db_config": DB_CONFIG,
         "memory_config": MEMORY_CONFIG,
         "server_config": SERVER_CONFIG,

@@ -12,9 +12,10 @@ from datetime import datetime
 from services.llm_service import llm_service
 from services.character_manager import CharacterManager
 from services.memory_manager import MemoryManager
-from db.database import get_db
+from utils.db import db_manager
 
 logger = logging.getLogger(__name__)
+
 
 class ChatService:
     """Service pour gérer les sessions de chat et l'intégration avec les LLM"""
@@ -22,7 +23,6 @@ class ChatService:
     def __init__(self):
         """Initialise le service de chat"""
         self.sessions = {}  # Cache des sessions actives
-        self.db = get_db()
         self.character_manager = CharacterManager()
         self.memory_manager = MemoryManager()
 
@@ -50,7 +50,8 @@ class ChatService:
 
             # Obtenir le contexte de conversation pour ce personnage
             if not context:
-                context = self.character_manager.get_character_conversation_context(character_id)
+                context = self.character_manager.get_character_conversation_context(
+                    character_id)
 
             # Créer l'objet session
             timestamp = datetime.now().isoformat()
@@ -66,15 +67,18 @@ class ChatService:
             }
 
             # Stocker dans la base de données
-            query = """
-            INSERT INTO chat_sessions (id, user_id, character_id, created_at, updated_at, context, active)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """
-            self.db.execute(
-                query,
-                (session_id, user_id, character_id, timestamp, timestamp, json.dumps(context), 1)
-            )
-            self.db.commit()
+            session_data = {
+                "id": session_id,
+                "user_id": user_id,
+                "character_id": character_id,
+                "created_at": timestamp,
+                "updated_at": timestamp,
+                "context": json.dumps(context),
+                "active": 1
+            }
+
+            # Insérer en utilisant le gestionnaire de DB
+            db_manager.insert("chat_sessions", session_data)
 
             # Mettre en cache
             self.sessions[session_id] = session
@@ -100,14 +104,10 @@ class ChatService:
             return self.sessions[session_id]
 
         # Sinon, récupérer depuis la base de données
-        query = "SELECT * FROM chat_sessions WHERE id = ?"
-        result = self.db.execute(query, (session_id,)).fetchone()
+        session = db_manager.get_by_id("chat_sessions", session_id)
 
-        if not result:
+        if not session:
             raise ValueError(f"Session {session_id} non trouvée")
-
-        # Convertir en dictionnaire
-        session = dict(result)
 
         # Convertir le contexte JSON en dictionnaire
         if session.get("context"):
@@ -129,20 +129,12 @@ class ChatService:
         Returns:
             Liste des sessions
         """
-        query = """
-        SELECT * FROM chat_sessions
-        WHERE user_id = ?
-        ORDER BY updated_at DESC
-        LIMIT ?
-        """
-        results = self.db.execute(query, (user_id, limit)).fetchall()
+        query = "SELECT * FROM chat_sessions WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?"
+        sessions = db_manager.execute_query(query, (user_id, limit))
 
-        sessions = []
-        for row in results:
-            session = dict(row)
+        for session in sessions:
             if session.get("context"):
                 session["context"] = json.loads(session["context"])
-            sessions.append(session)
 
         return sessions
 
@@ -157,21 +149,18 @@ class ChatService:
             True si la suppression a réussi
         """
         try:
-            # Supprimer de la base de données
-            query = "DELETE FROM chat_sessions WHERE id = ?"
-            self.db.execute(query, (session_id,))
-
             # Supprimer les messages associés
-            query = "DELETE FROM chat_messages WHERE session_id = ?"
-            self.db.execute(query, (session_id,))
+            db_manager.delete("chat_messages", "session_id = ?", (session_id,))
 
-            self.db.commit()
+            # Supprimer la session
+            rows_deleted = db_manager.delete(
+                "chat_sessions", "id = ?", (session_id,))
 
             # Supprimer du cache si présent
             if session_id in self.sessions:
                 del self.sessions[session_id]
 
-            return True
+            return rows_deleted > 0
         except Exception as e:
             logger.error(f"Erreur lors de la suppression de session: {e}")
             return False
@@ -194,14 +183,11 @@ class ChatService:
         ORDER BY timestamp ASC
         LIMIT ? OFFSET ?
         """
-        results = self.db.execute(query, (session_id, limit, offset)).fetchall()
+        messages = db_manager.execute_query(query, (session_id, limit, offset))
 
-        messages = []
-        for row in results:
-            message = dict(row)
+        for message in messages:
             if message.get("metadata"):
                 message["metadata"] = json.loads(message["metadata"])
-            messages.append(message)
 
         return messages
 
@@ -266,7 +252,7 @@ class ChatService:
             INSERT INTO chat_messages (id, session_id, sender, content, character_id, timestamp, metadata)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """
-            self.db.execute(
+            db_manager.execute(
                 query,
                 (
                     user_message_id,
@@ -281,10 +267,11 @@ class ChatService:
 
             # Mettre à jour le timestamp de la session
             query = "UPDATE chat_sessions SET updated_at = ? WHERE id = ?"
-            self.db.execute(query, (timestamp, session_id))
+            db_manager.execute(query, (timestamp, session_id))
 
             # Trouver les mémoires pertinentes
-            relevant_memories = self.memory_manager.get_relevant_memories(character_id, user_input)
+            relevant_memories = self.memory_manager.get_relevant_memories(
+                character_id, user_input)
 
             # Mettre à jour le contexte de la session avec les mémoires pertinentes
             if "context" not in session:
@@ -295,7 +282,8 @@ class ChatService:
             prompt = self._build_conversation_prompt(session, user_input)
 
             # Récupérer le système de prompt
-            system_prompt = session.get("context", {}).get("system_instructions", "Tu es un assistant IA conversationnel.")
+            system_prompt = session.get("context", {}).get(
+                "system_instructions", "Tu es un assistant IA conversationnel.")
 
             # Générer la réponse avec le LLM
             start_time = time.time()
@@ -321,7 +309,7 @@ class ChatService:
             INSERT INTO chat_messages (id, session_id, sender, content, character_id, timestamp, metadata)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """
-            self.db.execute(
+            db_manager.execute(
                 query,
                 (
                     assistant_message_id,
@@ -334,7 +322,7 @@ class ChatService:
                 )
             )
 
-            self.db.commit()
+            db_manager.commit()
 
             # Créer une mémoire à partir de la conversation
             memory_content = f"User: {user_input}\n{response_text}"
@@ -372,6 +360,175 @@ class ChatService:
             Réponse simulée
         """
         return llm_service._generate_mock_response(prompt)
+
+    def add_message(self, session_id: str, content: str, role: str,
+                    metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Ajoute un message à une session de chat
+
+        Args:
+            session_id: ID de la session
+            content: Contenu du message
+            role: Rôle de l'émetteur (user/assistant)
+            metadata: Métadonnées du message
+
+        Returns:
+            Message créé
+        """
+        try:
+            session = self.get_session(session_id)
+
+            # Créer le message
+            timestamp = int(time.time())
+            message_id = str(uuid.uuid4())
+
+            message = {
+                "id": message_id,
+                "session_id": session_id,
+                "content": content,
+                "role": role,
+                "timestamp": timestamp,
+                "metadata": json.dumps(metadata) if metadata else None
+            }
+
+            # Insérer en base de données
+            query = """
+            INSERT INTO chat_messages (id, session_id, content, role, timestamp, metadata, memory_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """
+            db_manager.execute(
+                query,
+                (
+                    message_id,
+                    session_id,
+                    content,
+                    role,
+                    timestamp,
+                    message["metadata"],
+                    None  # memory_id
+                )
+            )
+
+            # Mettre à jour le timestamp de la session
+            query = "UPDATE chat_sessions SET updated_at = ? WHERE id = ?"
+            db_manager.execute(query, (timestamp, session_id))
+
+            # Trouver les mémoires pertinentes
+            if role == "user":
+                try:
+                    memory_id = self.memory_manager.create_memory(
+                        content,
+                        session["character_id"],
+                        type="conversation",
+                        source=f"chat:{session_id}"
+                    )
+
+                    # Mettre à jour le message avec l'ID de la mémoire
+                    if memory_id:
+                        query = "UPDATE chat_messages SET memory_id = ? WHERE id = ?"
+                        db_manager.execute(query, (memory_id, message_id))
+                        message["memory_id"] = memory_id
+                except Exception as e:
+                    logger.error(
+                        f"Erreur lors de la création de la mémoire: {e}")
+
+            db_manager.commit()
+
+            # Convertir les métadonnées JSON en dictionnaire
+            if message.get("metadata"):
+                message["metadata"] = json.loads(message["metadata"])
+
+            return message
+
+        except Exception as e:
+            logger.error(f"Erreur lors de l'ajout du message: {e}")
+            raise
+
+    def generate_response(self, session_id: str, user_message: str) -> Dict[str, Any]:
+        """
+        Génère une réponse automatique à partir d'un message utilisateur
+
+        Args:
+            session_id: ID de la session
+            user_message: Message de l'utilisateur
+
+        Returns:
+            Message généré par l'assistant
+        """
+        try:
+            # Ajouter le message de l'utilisateur
+            self.add_message(session_id, user_message, "user")
+
+            # Récupérer la session
+            session = self.get_session(session_id)
+
+            # Récupérer les messages récents
+            messages = self.get_session_messages(session_id)
+
+            # Générer une réponse
+            context = session.get("context", {})
+            character_id = session.get("character_id")
+
+            # Obtenir le contexte complet du personnage
+            if character_id:
+                character_context = self.character_manager.get_character_conversation_context(
+                    character_id)
+                if character_context:
+                    if not context:
+                        context = {}
+                    context.update(character_context)
+
+            # Créer un modèle de réponse vide
+            timestamp = int(time.time())
+            message_id = str(uuid.uuid4())
+
+            # Si on est en mode simulation, générer une réponse fictive
+            if context.get("simulation_mode"):
+                response_content = self._generate_mock_response(
+                    user_message, messages, context)
+            else:
+                # TODO: Intégrer avec le service LLM
+                response_content = f"Je suis désolé, je ne peux pas répondre à ce message pour le moment."
+
+            # Créer le message de réponse
+            response = {
+                "id": message_id,
+                "session_id": session_id,
+                "content": response_content,
+                "role": "assistant",
+                "timestamp": timestamp,
+                "metadata": None
+            }
+
+            # Insérer en base de données
+            query = """
+            INSERT INTO chat_messages (id, session_id, content, role, timestamp, metadata, memory_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """
+            db_manager.execute(
+                query,
+                (
+                    message_id,
+                    session_id,
+                    response_content,
+                    "assistant",
+                    timestamp,
+                    None,  # metadata
+                    None  # memory_id
+                )
+            )
+
+            # Mettre à jour le timestamp de la session
+            query = "UPDATE chat_sessions SET updated_at = ? WHERE id = ?"
+            db_manager.execute(query, (timestamp, session_id))
+
+            db_manager.commit()
+
+            return response
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération de réponse: {e}")
+            raise
 
 
 # Instance globale du service de chat
