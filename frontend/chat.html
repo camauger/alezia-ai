@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alezia AI - Conversation</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/chat.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="logo">
+                <a href="index.html">
+                    <h1>Alezia<span>AI</span></h1>
+                </a>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="index.html">Accueil</a></li>
+                    <li><a href="characters.html">Personnages</a></li>
+                    <li><a href="chat.html" class="active">Conversation</a></li>
+                    <li><a href="memory-explorer.html">Mémoires</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div id="chat-container" class="chat-container">
+                <div class="chat-header">
+                    <div class="chat-title">Conversation</div>
+                    <div class="chat-status">
+                        <div id="api-status" class="status-disconnected">Déconnecté</div>
+                    </div>
+                </div>
+
+                <div class="character-selector">
+                    <select id="character-selector">
+                        <option value="">Sélectionnez un personnage...</option>
+                    </select>
+                    <button id="start-new-chat" class="new-chat-button">
+                        <i class="fas fa-plus"></i> Nouvelle conversation
+                    </button>
+                </div>
+
+                <div class="chat-body">
+                    <div id="chat-messages" class="chat-messages">
+                        <div class="message system-message">
+                            Bienvenue dans Alezia AI. Veuillez sélectionner un personnage pour commencer une conversation.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-controls">
+                    <textarea
+                        id="message-input"
+                        class="message-input"
+                        placeholder="Écrivez votre message..."
+                        disabled></textarea>
+                    <button id="send-button" class="send-button" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Indicateur de chargement -->
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <footer>
+        <div class="footer-container">
+            <p>&copy; 2023 Alezia AI - Une plateforme de personnages IA conversationnels</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/chat.js"></script>
+</body>
+</html>

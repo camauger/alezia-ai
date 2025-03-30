@@ -1,82 +1,110 @@
 """
-Routes pour la gestion des sessions de chat et des messages
+Routes pour la gestion des conversations
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
+import logging
+from typing import Dict, Any, List, Optional
+from fastapi import APIRouter, HTTPException, Depends, Body
 
-from services.chat_manager import chat_manager
+from services.chat_service import chat_service
+from models.chat import SessionCreate, MessageCreate, ChatSession, ChatMessage
 
-router = APIRouter(prefix="/chat", tags=["Chat"])
-
-
-class MessageCreate(BaseModel):
-    """Modèle pour la création d'un message"""
-    content: str
+router = APIRouter(prefix="/chat", tags=["chat"])
+logger = logging.getLogger(__name__)
 
 
-class SessionCreate(BaseModel):
-    """Modèle pour la création d'une session"""
-    character_id: int
-
-
-@router.post("/session", status_code=201)
-@router.post("/session/", status_code=201)
-async def create_session(session: SessionCreate) -> Dict[str, Any]:
-    """Crée une nouvelle session de chat"""
+@router.post("/create", status_code=201)
+async def create_chat_session(session_data: SessionCreate):
+    """
+    Crée une nouvelle session de chat
+    """
     try:
-        result = chat_manager.create_session(session.character_id)
-        return result
+        session = chat_service.create_session(
+            user_id=session_data.user_id,
+            character_id=session_data.character_id,
+            context=session_data.context.dict() if session_data.context else None
+        )
+        return session
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("/session/{session_id}")
-@router.get("/session/{session_id}/")
-async def get_session(session_id: int) -> Dict[str, Any]:
-    """Récupère les détails d'une session"""
-    session = chat_manager.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session introuvable")
-    return session
-
-
-@router.get("/character/{character_id}/sessions")
-@router.get("/character/{character_id}/sessions/")
-async def get_character_sessions(character_id: int, limit: int = 10) -> List[Dict[str, Any]]:
-    """Récupère les sessions pour un personnage"""
-    return chat_manager.get_character_sessions(character_id, limit)
-
-
-@router.post("/{session_id}/message")
-@router.post("/{session_id}/message/")
-async def send_message(session_id: int, message: MessageCreate) -> Dict[str, Any]:
-    """Envoie un message dans la session et génère une réponse"""
-    try:
-        result = await chat_manager.send_message(session_id, message.content)
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
+        logger.error(f"Erreur lors de la création de session: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/{session_id}/history")
-@router.get("/{session_id}/history/")
-async def get_session_history(session_id: int) -> Dict[str, Any]:
-    """Récupère l'historique d'une session"""
-    session = chat_manager.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session introuvable")
-    return session
+@router.get("/session/{session_id}")
+async def get_chat_session(session_id: str):
+    """
+    Récupère les détails d'une session de chat
+    """
+    try:
+        session = chat_service.get_session(session_id)
+        return session
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération de session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/{session_id}/end", status_code=200)
-@router.post("/{session_id}/end/", status_code=200)
-async def end_session(session_id: int) -> Dict[str, bool]:
-    """Termine une session de chat"""
-    success = chat_manager.end_session(session_id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Session introuvable")
-    return {"success": True}
+@router.get("/sessions")
+async def get_user_sessions(user_id: str, limit: int = 10):
+    """
+    Récupère les sessions de chat d'un utilisateur
+    """
+    try:
+        sessions = chat_service.get_user_sessions(user_id, limit)
+        return sessions
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des sessions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/message")
+async def send_message(message_data: MessageCreate):
+    """
+    Envoie un message dans une session de chat et reçoit la réponse du personnage
+    """
+    try:
+        # Envoyer le message et récupérer la réponse
+        response = chat_service.send_message(
+            session_id=message_data.session_id,
+            user_input=message_data.content,
+            metadata=message_data.metadata.dict() if message_data.metadata else None
+        )
+        return response
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi du message: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/messages/{session_id}")
+async def get_session_messages(session_id: str, limit: int = 50, offset: int = 0):
+    """
+    Récupère les messages d'une session de chat
+    """
+    try:
+        messages = chat_service.get_session_messages(session_id, limit, offset)
+        return messages
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des messages: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/session/{session_id}")
+async def delete_chat_session(session_id: str):
+    """
+    Supprime une session de chat
+    """
+    try:
+        success = chat_service.delete_session(session_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Session non trouvée")
+        return {"message": "Session supprimée avec succès"}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Erreur lors de la suppression de session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

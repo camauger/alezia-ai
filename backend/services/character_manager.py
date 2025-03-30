@@ -226,6 +226,127 @@ class CharacterManager:
             self._initialize_user_relationship(character_id)
             return UserCharacterRelationship(character_id=character_id)
 
+    def get_character_profile(self, character_id: int) -> str:
+        """
+        Génère un profil complet du personnage pour être utilisé comme contexte dans les conversations.
+        Inclut tous les paramètres importants du personnage et les faits extraits des mémoires.
+
+        Args:
+            character_id: ID du personnage
+
+        Returns:
+            Profil complet formaté sous forme de texte
+        """
+        from services.memory_manager import memory_manager
+
+        try:
+            character = self.get_character(character_id)
+            if not character:
+                return "Personnage inconnu."
+
+            # Récupérer les faits les plus importants sur le personnage
+            facts = memory_manager.get_facts(character_id)
+
+            # Organiser les faits par sujet
+            facts_by_subject = {}
+            for fact in facts:
+                if fact.subject not in facts_by_subject:
+                    facts_by_subject[fact.subject] = []
+                facts_by_subject[fact.subject].append(fact)
+
+            # Construire le profil
+            profile = f"# PROFIL DE PERSONNAGE: {character.name.upper()}\n\n"
+
+            # Informations de base
+            profile += "## Informations de base\n"
+            profile += f"Nom: {character.name}\n"
+            profile += f"Description: {character.description}\n\n"
+
+            # Personnalité
+            profile += "## Personnalité et comportement\n"
+            profile += f"{character.personality}\n\n"
+
+            # Histoire
+            profile += "## Histoire et contexte\n"
+            profile += f"{character.backstory}\n\n"
+
+            # Faits connus
+            if facts:
+                profile += "## Faits connus sur le personnage\n"
+
+                for subject, subject_facts in facts_by_subject.items():
+                    # Trier les faits par confiance (décroissante)
+                    subject_facts.sort(
+                        key=lambda x: x.confidence, reverse=True)
+
+                    profile += f"### À propos de {subject}\n"
+                    for fact in subject_facts:
+                        # N'inclure que les faits avec une confiance minimale
+                        if fact.confidence >= 0.5:
+                            confidence_indicator = "!" if fact.confidence >= 0.8 else ""
+                            profile += f"- {confidence_indicator}{fact.predicate} {fact.object}{confidence_indicator}\n"
+                    profile += "\n"
+
+            # Instructions supplémentaires pour le comportement en conversation
+            profile += "## Instructions pour la conversation\n"
+            profile += "- Reste fidèle à la personnalité décrite ci-dessus.\n"
+            profile += "- Utilise les faits connus pour contextualiser les réponses.\n"
+            profile += "- Les faits marqués avec '!' sont particulièrement importants et certains.\n"
+            profile += "- Maintiens la cohérence avec l'histoire du personnage.\n"
+            profile += f"- Ce personnage appartient à l'univers: '{character.universe.name}'.\n"
+
+            return profile
+
+        except Exception as e:
+            logger.error(
+                f"Erreur lors de la génération du profil du personnage {character_id}: {e}")
+            return "Erreur lors de la génération du profil du personnage."
+
+    def get_character_conversation_context(self, character_id: int, include_memories: bool = True) -> Dict[str, Any]:
+        """
+        Prépare le contexte complet pour une conversation avec un personnage.
+
+        Args:
+            character_id: ID du personnage
+            include_memories: Si True, inclut les mémoires pertinentes
+
+        Returns:
+            Dictionnaire avec toutes les informations nécessaires pour le contexte
+        """
+        from services.memory_manager import memory_manager
+
+        character = self.get_character(character_id)
+        if not character:
+            return {"error": "Personnage introuvable"}
+
+        context = {
+            "character": character.dict(),
+            "profile": self.get_character_profile(character_id),
+            "memories": []
+        }
+
+        # Ajouter les mémoires les plus importantes
+        if include_memories:
+            try:
+                # Récupérer les mémoires importantes pour le contexte de la conversation
+                important_memories = memory_manager.get_memories(
+                    character_id,
+                    limit=10
+                )
+
+                # Trier par importance décroissante
+                important_memories.sort(
+                    key=lambda x: x.importance, reverse=True)
+
+                # Inclure seulement les 5 plus importantes pour ne pas surcharger le contexte
+                context["memories"] = important_memories[:5]
+
+            except Exception as e:
+                logger.error(
+                    f"Erreur lors de la récupération des mémoires pour le contexte: {e}")
+
+        return context
+
 
 # Instance globale du gestionnaire de personnages
 character_manager = CharacterManager()
