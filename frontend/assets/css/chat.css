@@ -1,0 +1,333 @@
+/* Styles pour le chat */
+
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --accent-color: #e74c3c;
+    --background-color: #f5f5f5;
+    --chat-user-bg: #e1f0fa;
+    --chat-character-bg: #f0f0f0;
+    --chat-system-bg: #ffe9c5;
+    --chat-error-bg: #ffdddd;
+    --text-color: #333;
+    --light-text: #777;
+    --border-color: #ddd;
+    --success-color: #2ecc71;
+    --warning-color: #f39c12;
+    --error-color: #e74c3c;
+}
+
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.chat-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.chat-status {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-connected {
+    background-color: var(--success-color);
+}
+
+.status-warning {
+    background-color: var(--warning-color);
+}
+
+.status-disconnected {
+    background-color: var(--error-color);
+}
+
+.chat-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.message {
+    padding: 10px 15px;
+    border-radius: 8px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.user-message {
+    align-self: flex-end;
+    background-color: var(--chat-user-bg);
+    border-bottom-right-radius: 2px;
+}
+
+.character-message {
+    align-self: flex-start;
+    background-color: var(--chat-character-bg);
+    border-bottom-left-radius: 2px;
+    display: flex;
+    gap: 10px;
+}
+
+.message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--secondary-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 1.2rem;
+    overflow: hidden;
+}
+
+.message-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.message-content {
+    flex: 1;
+}
+
+.system-message {
+    align-self: center;
+    background-color: var(--chat-system-bg);
+    font-style: italic;
+    font-size: 0.9rem;
+    color: var(--light-text);
+}
+
+.error-message {
+    align-self: center;
+    background-color: var(--chat-error-bg);
+    color: var(--error-color);
+    font-weight: 500;
+}
+
+.chat-controls {
+    display: flex;
+    padding: 15px;
+    background-color: var(--background-color);
+    border-top: 1px solid var(--border-color);
+    gap: 10px;
+}
+
+.message-input {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 10px 15px;
+    resize: none;
+    min-height: 40px;
+    max-height: 120px;
+    outline: none;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.message-input:focus {
+    border-color: var(--primary-color);
+}
+
+.send-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.send-button:hover {
+    background-color: #2980b9;
+}
+
+.send-button:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+}
+
+.character-selector {
+    padding: 15px;
+    background-color: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.character-selector select {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    outline: none;
+    font-size: 1rem;
+}
+
+.character-selector select:focus {
+    border-color: var(--primary-color);
+}
+
+.new-chat-button {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.new-chat-button:hover {
+    background-color: #34495e;
+}
+
+.new-chat-button:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+}
+
+/* États spéciaux */
+.chat-container.limited-mode {
+    opacity: 0.9;
+}
+
+.chat-container.disconnected-mode {
+    opacity: 0.7;
+}
+
+.chat-container.disconnected-mode .chat-messages::after {
+    content: "Connexion perdue avec l'API";
+    display: block;
+    text-align: center;
+    padding: 20px;
+    color: var(--error-color);
+    font-weight: bold;
+}
+
+/* Indicateur de chargement */
+.loading-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--border-color);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Animation de l'indicateur de saisie */
+.typing {
+    margin-bottom: 10px;
+}
+
+.typing .message-content {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.typing .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--light-text);
+    animation: bounce 1.4s infinite ease-in-out;
+}
+
+.typing .dot:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.typing .dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing .dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-10px);
+    }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .chat-container {
+        max-width: 100%;
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    .message {
+        max-width: 90%;
+    }
+}

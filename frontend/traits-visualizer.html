@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alezia AI - Visualiseur de traits</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .traits-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #1a1a2e;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .trait-card {
+            background-color: #162447;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .trait-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .trait-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .trait-name {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #e43f5a;
+        }
+
+        .trait-category {
+            font-size: 0.9em;
+            color: #8c8c8c;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background-color: #1b1b2f;
+        }
+
+        .trait-value-container {
+            margin: 15px 0;
+            position: relative;
+            height: 30px;
+            background-color: #1b1b2f;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .trait-range {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .negative-side, .positive-side {
+            width: 50%;
+            height: 100%;
+            position: relative;
+        }
+
+        .negative-side {
+            background: linear-gradient(90deg, #e74c3c, transparent);
+        }
+
+        .positive-side {
+            background: linear-gradient(90deg, transparent, #2ecc71);
+        }
+
+        .trait-marker {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 5px;
+            background-color: #fff;
+            border-radius: 50%;
+            z-index: 2;
+            transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .trait-description {
+            margin: 10px 0;
+            font-size: 0.9em;
+            color: #d1d1d1;
+        }
+
+        .trait-volatility {
+            font-size: 0.8em;
+            color: #8c8c8c;
+        }
+
+        .history-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #2a2a4a;
+        }
+
+        .history-entry {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #1b1b2f;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        .change-positive {
+            color: #2ecc71;
+        }
+
+        .change-negative {
+            color: #e74c3c;
+        }
+
+        .history-reason {
+            font-style: italic;
+            color: #8c8c8c;
+        }
+
+        .trait-controls {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .update-trait {
+            padding: 5px 10px;
+            background-color: #e43f5a;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .update-trait:hover {
+            background-color: #c43550;
+        }
+
+        .select-character {
+            padding: 10px;
+            background-color: #162447;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .trait-filter {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+
+        .filter-btn {
+            background-color: #1b1b2f;
+            color: #8c8c8c;
+            border: none;
+            padding: 5px 10px;
+            margin-left: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .filter-btn.active {
+            background-color: #e43f5a;
+            color: white;
+        }
+
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 1.2em;
+            color: #8c8c8c;
+        }
+
+        .error {
+            color: #e74c3c;
+            padding: 10px;
+            background-color: rgba(231, 76, 60, 0.1);
+            border-radius: 5px;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Alezia AI - Visualiseur de traits</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Accueil</a></li>
+                <li><a href="chat.html">Chat</a></li>
+                <li><a href="memory-explorer.html">Explorateur de mémoire</a></li>
+                <li><a href="traits-visualizer.html" class="active">Traits</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <div class="traits-container">
+            <h2>Évolution des traits de personnalité</h2>
+            <p>Visualisez et manipulez les traits de personnalité des personnages AI.</p>
+
+            <div id="character-selector">
+                <select id="select-character" class="select-character">
+                    <option value="">Sélectionnez un personnage</option>
+                </select>
+            </div>
+
+            <div id="trait-filter" class="trait-filter">
+                <button class="filter-btn active" data-category="all">Tous</button>
+                <button class="filter-btn" data-category="social">Social</button>
+                <button class="filter-btn" data-category="émotionnel">Émotionnel</button>
+                <button class="filter-btn" data-category="cognitif">Cognitif</button>
+                <button class="filter-btn" data-category="comportemental">Comportemental</button>
+            </div>
+
+            <div id="traits-list">
+                <div class="loading">Chargement des traits...</div>
+            </div>
+
+            <div class="history-section">
+                <h3>Historique des changements</h3>
+                <div id="traits-history">
+                    <div class="loading">Chargement de l'historique...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="assets/js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            let selectedCharacterId = null;
+            const characterSelector = document.getElementById('select-character');
+            const traitsList = document.getElementById('traits-list');
+            const traitsHistory = document.getElementById('traits-history');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            let currentFilter = 'all';
+
+            // Fonction pour charger les personnages
+            async function loadCharacters() {
+                try {
+                    const characters = await aleziaAPI.getCharacters();
+                    characterSelector.innerHTML = '<option value="">Sélectionnez un personnage</option>';
+                    characters.forEach(character => {
+                        const option = document.createElement('option');
+                        option.value = character.id;
+                        option.textContent = character.name;
+                        characterSelector.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Erreur lors du chargement des personnages:', error);
+                    characterSelector.innerHTML = '<option value="">Erreur de chargement</option>';
+                }
+            }
+
+            // Fonction pour charger les traits d'un personnage
+            async function loadCharacterTraits(characterId) {
+                traitsList.innerHTML = '<div class="loading">Chargement des traits...</div>';
+                try {
+                    const traits = await aleziaAPI.getCharacterTraits(characterId);
+                    renderTraits(traits, currentFilter);
+                } catch (error) {
+                    console.error('Erreur lors du chargement des traits:', error);
+                    traitsList.innerHTML = `<div class="error">Erreur: ${error.message}</div>`;
+                }
+            }
+
+            // Fonction pour charger l'historique des traits
+            async function loadTraitsHistory(characterId) {
+                traitsHistory.innerHTML = '<div class="loading">Chargement de l\'historique...</div>';
+                try {
+                    const history = await aleziaAPI.getTraitHistory(characterId);
+                    renderTraitsHistory(history);
+                } catch (error) {
+                    console.error('Erreur lors du chargement de l\'historique:', error);
+                    traitsHistory.innerHTML = `<div class="error">Erreur: ${error.message}</div>`;
+                }
+            }
+
+            // Fonction pour mettre à jour un trait
+            async function updateTrait(characterId, traitName, value, reason) {
+                try {
+                    await aleziaAPI.updateCharacterTrait(characterId, traitName, value, reason);
+                    loadCharacterTraits(characterId);
+                    loadTraitsHistory(characterId);
+                } catch (error) {
+                    console.error('Erreur lors de la mise à jour du trait:', error);
+                    alert(`Erreur: ${error.message}`);
+                }
+            }
+
+            // Fonction pour afficher les traits
+            function renderTraits(traitsData, filter) {
+                if (!traitsData || !traitsData.traits || traitsData.traits.length === 0) {
+                    traitsList.innerHTML = '<div class="error">Aucun trait trouvé pour ce personnage.</div>';
+                    return;
+                }
+
+                traitsList.innerHTML = '';
+                const filteredTraits = filter === 'all'
+                    ? traitsData.traits
+                    : traitsData.traits.filter(trait => trait.category === filter);
+
+                if (filteredTraits.length === 0) {
+                    traitsList.innerHTML = `<div class="error">Aucun trait dans la catégorie "${filter}" pour ce personnage.</div>`;
+                    return;
+                }
+
+                filteredTraits.forEach(trait => {
+                    const traitCard = document.createElement('div');
+                    traitCard.className = 'trait-card';
+                    traitCard.dataset.category = trait.category;
+
+                    // Convertir la valeur (-1 à 1) en position pour le marqueur (0% à 100%)
+                    const markerPosition = ((trait.value + 1) / 2) * 100;
+
+                    traitCard.innerHTML = `
+                        <div class="trait-header">
+                            <span class="trait-name">${trait.name}</span>
+                            <span class="trait-category">${trait.category}</span>
+                        </div>
+                        <div class="trait-description">${trait.description}</div>
+                        <div class="trait-value-container">
+                            <div class="trait-range">
+                                <div class="negative-side"></div>
+                                <div class="positive-side"></div>
+                            </div>
+                            <div class="trait-marker" style="left: ${markerPosition}%"></div>
+                        </div>
+                        <div class="trait-volatility">Volatilité: ${(trait.volatility * 100).toFixed(0)}%</div>
+                        <div class="trait-controls">
+                            <input type="range" min="-1" max="1" step="0.1" value="${trait.value}"
+                                   data-trait="${trait.name}" class="trait-slider">
+                            <button class="update-trait" data-trait="${trait.name}">Mettre à jour</button>
+                        </div>
+                    `;
+
+                    traitsList.appendChild(traitCard);
+                });
+
+                // Ajouter les événements aux sliders et boutons de mise à jour
+                document.querySelectorAll('.trait-slider').forEach(slider => {
+                    slider.addEventListener('input', event => {
+                        const traitName = event.target.dataset.trait;
+                        const value = parseFloat(event.target.value);
+                        const markerPosition = ((value + 1) / 2) * 100;
+
+                        // Mettre à jour la position du marqueur
+                        const traitCard = event.target.closest('.trait-card');
+                        const marker = traitCard.querySelector('.trait-marker');
+                        marker.style.left = `${markerPosition}%`;
+                    });
+                });
+
+                document.querySelectorAll('.update-trait').forEach(button => {
+                    button.addEventListener('click', event => {
+                        const traitName = event.target.dataset.trait;
+                        const traitCard = event.target.closest('.trait-card');
+                        const slider = traitCard.querySelector('.trait-slider');
+                        const value = parseFloat(slider.value);
+
+                        const reason = prompt(`Pourquoi modifier le trait "${traitName}" à ${value.toFixed(1)} ?`, "Ajustement manuel");
+                        if (reason) {
+                            updateTrait(selectedCharacterId, traitName, value, reason);
+                        }
+                    });
+                });
+            }
+
+            // Fonction pour afficher l'historique des traits
+            function renderTraitsHistory(history) {
+                if (!history || history.length === 0) {
+                    traitsHistory.innerHTML = '<div class="error">Aucun historique trouvé pour ce personnage.</div>';
+                    return;
+                }
+
+                traitsHistory.innerHTML = '';
+                history.forEach(entry => {
+                    const historyEntry = document.createElement('div');
+                    historyEntry.className = 'history-entry';
+
+                    const changeClass = entry.change_amount > 0 ? 'change-positive' : (entry.change_amount < 0 ? 'change-negative' : '');
+                    const changeSymbol = entry.change_amount > 0 ? '▲' : (entry.change_amount < 0 ? '▼' : '■');
+
+                    historyEntry.innerHTML = `
+                        <div>
+                            <strong>${entry.trait_name}</strong>:
+                            ${entry.old_value.toFixed(2)} → ${entry.new_value.toFixed(2)}
+                            <span class="${changeClass}">${changeSymbol} ${Math.abs(entry.change_amount).toFixed(2)}</span>
+                        </div>
+                        <div class="history-reason">${entry.reason}</div>
+                        <div class="history-timestamp">
+                            ${new Date(entry.timestamp).toLocaleDateString()}
+                            ${new Date(entry.timestamp).toLocaleTimeString()}
+                        </div>
+                    `;
+
+                    traitsHistory.appendChild(historyEntry);
+                });
+            }
+
+            // Événement de changement de personnage
+            characterSelector.addEventListener('change', event => {
+                selectedCharacterId = event.target.value;
+                if (selectedCharacterId) {
+                    loadCharacterTraits(selectedCharacterId);
+                    loadTraitsHistory(selectedCharacterId);
+                } else {
+                    traitsList.innerHTML = '<div class="loading">Sélectionnez un personnage pour voir ses traits</div>';
+                    traitsHistory.innerHTML = '<div class="loading">Sélectionnez un personnage pour voir l\'historique</div>';
+                }
+            });
+
+            // Événements des boutons de filtre
+            filterButtons.forEach(button => {
+                button.addEventListener('click', event => {
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    event.target.classList.add('active');
+                    currentFilter = event.target.dataset.category;
+
+                    if (selectedCharacterId) {
+                        loadCharacterTraits(selectedCharacterId);
+                    }
+                });
+            });
+
+            // Charger les personnages au démarrage
+            await loadCharacters();
+        });
+    </script>
+</body>
+</html>

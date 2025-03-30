@@ -5,13 +5,34 @@
 
 class AleziaAPI {
     constructor() {
-        // Déterminer automatiquement l'URL de base en fonction de l'hôte actuel
-        const hostname = window.location.hostname;
-        this.baseUrl = `http://${hostname}:8001`; // Changed from 8080
+        // Charger le port API depuis le fichier de configuration
+        this.loadApiConfig();
+        this.baseUrl = `http://localhost:${this.apiPort}`;
         this.connected = false;
+        this.apiUrl = null;
+        this.initPromise = this.initialize();
+    }
 
-        // Essayer de détecter automatiquement le port au démarrage
-        this.detectPort();
+    /**
+     * Charge la configuration de l'API
+     */
+    async loadApiConfig() {
+        try {
+            // Par défaut, utiliser le port 8000
+            this.apiPort = 8000;
+
+            // Tenter de charger le port depuis le fichier api_port.txt
+            const response = await fetch('api_port.txt');
+            if (response.ok) {
+                const port = await response.text();
+                this.apiPort = parseInt(port.trim(), 10) || 8000;
+            }
+
+            console.log(`Port API configuré: ${this.apiPort}`);
+        } catch (error) {
+            console.warn('Impossible de charger le port API, utilisation du port par défaut 8000', error);
+            this.apiPort = 8000;
+        }
     }
 
     /**
@@ -416,6 +437,336 @@ class AleziaAPI {
         } catch (error) {
             console.error('Erreur lors de la récupération de l\'historique:', error);
             return [];
+        }
+    }
+
+    /**
+     * Méthode utilitaire pour effectuer une requête API
+     * @param {string} endpoint - Endpoint API
+     * @param {Object} options - Options fetch
+     * @returns {Promise<Object>} - Réponse JSON
+     */
+    async fetchAPI(endpoint, options = {}) {
+        try {
+            // S'assurer que l'URL de base est correctement configurée
+            if (!this.baseUrl) {
+                await this.loadApiConfig();
+            }
+
+            // Configurer les headers par défaut
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(options.headers || {})
+            };
+
+            // Effectuer la requête
+            const response = await fetch(`${this.baseUrl}${endpoint}`, {
+                ...options,
+                headers
+            });
+
+            // Vérifier si la réponse est OK
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Erreur API: ${response.status} - ${errorText}`);
+            }
+
+            // Récupérer la réponse JSON
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            console.error(`Erreur lors de l'appel à ${endpoint}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Vérifie la santé de l'API
+     * @returns {Promise<Object>} - Statut de l'API
+     */
+    async checkHealth() {
+        try {
+            return await this.fetchAPI('/health');
+        } catch (error) {
+            console.error('Erreur lors de la vérification de la santé de l\'API:', error);
+            return { status: 'error', message: error.message };
+        }
+    }
+
+    /**
+     * Récupère la liste des personnages
+     * @returns {Promise<Array>} - Liste des personnages
+     */
+    async getCharacters() {
+        return await this.fetchAPI('/characters');
+    }
+
+    /**
+     * Récupère les détails d'un personnage
+     * @param {number} characterId - ID du personnage
+     * @returns {Promise<Object>} - Détails du personnage
+     */
+    async getCharacter(characterId) {
+        return await this.fetchAPI(`/characters/${characterId}`);
+    }
+
+    /**
+     * Crée un nouveau personnage
+     * @param {Object} characterData - Données du personnage
+     * @returns {Promise<Object>} - Personnage créé
+     */
+    async createCharacter(characterData) {
+        return await this.fetchAPI('/characters', {
+            method: 'POST',
+            body: JSON.stringify(characterData)
+        });
+    }
+
+    /**
+     * Met à jour un personnage existant
+     * @param {number} characterId - ID du personnage
+     * @param {Object} characterData - Données du personnage
+     * @returns {Promise<Object>} - Personnage mis à jour
+     */
+    async updateCharacter(characterId, characterData) {
+        return await this.fetchAPI(`/characters/${characterId}`, {
+            method: 'PUT',
+            body: JSON.stringify(characterData)
+        });
+    }
+
+    /**
+     * Supprime un personnage
+     * @param {number} characterId - ID du personnage
+     * @returns {Promise<Object>} - Résultat de la suppression
+     */
+    async deleteCharacter(characterId) {
+        return await this.fetchAPI(`/characters/${characterId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    /**
+     * Crée une nouvelle session de chat
+     * @param {number} characterId - ID du personnage
+     * @returns {Promise<Object>} - Session de chat créée
+     */
+    async createChatSession(characterId) {
+        return await this.fetchAPI('/chat/create', {
+            method: 'POST',
+            body: JSON.stringify({
+                character_id: characterId,
+                user_id: 'user-1' // ID utilisateur temporaire
+            })
+        });
+    }
+
+    /**
+     * Récupère les détails d'une session de chat
+     * @param {string} sessionId - ID de la session
+     * @returns {Promise<Object>} - Détails de la session
+     */
+    async getChatSession(sessionId) {
+        return await this.fetchAPI(`/chat/session/${sessionId}`);
+    }
+
+    /**
+     * Récupère les sessions de chat d'un utilisateur
+     * @param {string} userId - ID de l'utilisateur
+     * @param {number} limit - Nombre maximum de sessions à récupérer
+     * @returns {Promise<Array>} - Liste des sessions
+     */
+    async getUserChatSessions(userId, limit = 10) {
+        return await this.fetchAPI(`/chat/sessions?user_id=${userId}&limit=${limit}`);
+    }
+
+    /**
+     * Envoie un message dans une session de chat
+     * @param {string} sessionId - ID de la session
+     * @param {string} content - Contenu du message
+     * @returns {Promise<Object>} - Réponse du personnage
+     */
+    async sendMessage(sessionId, content) {
+        return await this.fetchAPI('/chat/message', {
+            method: 'POST',
+            body: JSON.stringify({
+                session_id: sessionId,
+                content: content
+            })
+        });
+    }
+
+    /**
+     * Récupère les messages d'une session de chat
+     * @param {string} sessionId - ID de la session
+     * @param {number} limit - Nombre maximum de messages à récupérer
+     * @param {number} offset - Décalage dans la liste des messages
+     * @returns {Promise<Array>} - Liste des messages
+     */
+    async getSessionMessages(sessionId, limit = 50, offset = 0) {
+        return await this.fetchAPI(`/chat/messages/${sessionId}?limit=${limit}&offset=${offset}`);
+    }
+
+    /**
+     * Récupère les mémoires d'un personnage
+     * @param {number} characterId - ID du personnage
+     * @param {number} limit - Nombre maximum de mémoires à récupérer
+     * @param {number} offset - Décalage dans la liste des mémoires
+     * @returns {Promise<Array>} - Liste des mémoires
+     */
+    async getCharacterMemories(characterId, limit = 20, offset = 0) {
+        return await this.fetchAPI(`/memories/character/${characterId}?limit=${limit}&offset=${offset}`);
+    }
+
+    /**
+     * Récupère les faits extraits d'un personnage
+     * @param {number} characterId - ID du personnage
+     * @returns {Promise<Object>} - Faits extraits
+     */
+    async getCharacterFacts(characterId) {
+        return await this.fetchAPI(`/memories/facts/${characterId}`);
+    }
+
+    /**
+     * Crée une nouvelle mémoire pour un personnage
+     * @param {Object} memoryData - Données de la mémoire
+     * @returns {Promise<Object>} - Mémoire créée
+     */
+    async createMemory(memoryData) {
+        return await this.fetchAPI('/memories', {
+            method: 'POST',
+            body: JSON.stringify(memoryData)
+        });
+    }
+
+    /**
+     * Met à jour une mémoire existante
+     * @param {string} memoryId - ID de la mémoire
+     * @param {Object} memoryData - Données de la mémoire
+     * @returns {Promise<Object>} - Mémoire mise à jour
+     */
+    async updateMemory(memoryId, memoryData) {
+        return await this.fetchAPI(`/memories/${memoryId}`, {
+            method: 'PUT',
+            body: JSON.stringify(memoryData)
+        });
+    }
+
+    /**
+     * Supprime une mémoire
+     * @param {string} memoryId - ID de la mémoire
+     * @returns {Promise<Object>} - Résultat de la suppression
+     */
+    async deleteMemory(memoryId) {
+        return await this.fetchAPI(`/memories/${memoryId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    // ==== API Traits de personnalité ====
+
+    /**
+     * Récupère les traits de personnalité d'un personnage
+     * @param {number} characterId - ID du personnage
+     * @returns {Promise<Object>} - Données des traits
+     */
+    async getCharacterTraits(characterId) {
+        await this.initPromise;
+        const url = `${this.apiUrl}/characters/${characterId}/traits`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || "Erreur lors de la récupération des traits");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Erreur lors de la récupération des traits:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Récupère l'historique des changements de traits d'un personnage
+     * @param {number} characterId - ID du personnage
+     * @param {string|null} traitName - Nom du trait (optionnel)
+     * @returns {Promise<Array>} - Historique des changements
+     */
+    async getTraitHistory(characterId, traitName = null) {
+        await this.initPromise;
+        let url = `${this.apiUrl}/characters/${characterId}/traits/history`;
+        if (traitName) {
+            url += `?trait_name=${encodeURIComponent(traitName)}`;
+        }
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || "Erreur lors de la récupération de l'historique");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Erreur lors de la récupération de l'historique:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Met à jour un trait de personnalité
+     * @param {number} characterId - ID du personnage
+     * @param {string} traitName - Nom du trait
+     * @param {number} value - Nouvelle valeur (-1.0 à 1.0)
+     * @param {string} reason - Raison du changement
+     * @returns {Promise<Object>} - Résultat de la mise à jour
+     */
+    async updateCharacterTrait(characterId, traitName, value, reason) {
+        await this.initPromise;
+        const url = `${this.apiUrl}/characters/${characterId}/traits/${traitName}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    value: value,
+                    reason: reason
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || "Erreur lors de la mise à jour du trait");
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error("Erreur lors de la mise à jour du trait:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Récupère l'état actuel d'un personnage, y compris ses traits actifs
+     * @param {number} characterId - ID du personnage
+     * @returns {Promise<Object>} - État du personnage
+     */
+    async getCharacterState(characterId) {
+        await this.initPromise;
+        const url = `${this.apiUrl}/characters/${characterId}/state`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || "Erreur lors de la récupération de l'état");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Erreur lors de la récupération de l'état:", error);
+            throw error;
         }
     }
 }

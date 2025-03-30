@@ -76,6 +76,33 @@ CREATE TABLE IF NOT EXISTS relationships (
     FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
 );
 
+-- Table des traits de personnalité
+CREATE TABLE IF NOT EXISTS personality_traits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    value REAL NOT NULL,
+    category TEXT NOT NULL,
+    description TEXT NOT NULL,
+    volatility REAL DEFAULT 0.2,
+    last_updated TEXT NOT NULL,
+    FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
+
+-- Table des changements de traits (historique)
+CREATE TABLE IF NOT EXISTS trait_changes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    character_id INTEGER NOT NULL,
+    trait_id INTEGER NOT NULL,
+    old_value REAL NOT NULL,
+    new_value REAL NOT NULL,
+    change_amount REAL NOT NULL,
+    reason TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE,
+    FOREIGN KEY (trait_id) REFERENCES personality_traits(id) ON DELETE CASCADE
+);
+
 -- Table des sessions
 CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -102,3 +129,6 @@ CREATE INDEX IF NOT EXISTS idx_memories_character_id ON memories(character_id);
 CREATE INDEX IF NOT EXISTS idx_relationships_character_id ON relationships(character_id);
 CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_facts_character_id ON facts(character_id);
+CREATE INDEX IF NOT EXISTS idx_personality_traits_character_id ON personality_traits(character_id);
+CREATE INDEX IF NOT EXISTS idx_trait_changes_character_id ON trait_changes(character_id);
+CREATE INDEX IF NOT EXISTS idx_trait_changes_trait_id ON trait_changes(trait_id);
