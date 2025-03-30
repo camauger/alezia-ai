@@ -413,12 +413,20 @@ class ChatService:
             query = "UPDATE chat_sessions SET updated_at = ? WHERE id = ?"
             db_manager.execute(query, (timestamp, session_id))
 
-            # Trouver les mémoires pertinentes
+            character_id = session.get("character_id")
+            if not character_id:
+                logger.warning(f"Session {session_id} n'a pas de character_id")
+                db_manager.commit()
+                return message
+
+            # Mettre à jour les traits de personnalité en fonction du contenu du message
             if role == "user":
+                # Les messages de l'utilisateur ont un impact plus fort sur les traits du personnage
                 try:
+                    # D'abord créer une mémoire
                     memory_id = self.memory_manager.create_memory(
                         content,
-                        session["character_id"],
+                        character_id,
                         type="conversation",
                         source=f"chat:{session_id}"
                     )
@@ -428,9 +436,30 @@ class ChatService:
                         query = "UPDATE chat_messages SET memory_id = ? WHERE id = ?"
                         db_manager.execute(query, (memory_id, message_id))
                         message["memory_id"] = memory_id
+
+                    # Mettre à jour les traits de personnalité basés sur le contenu
+                    self.character_manager.update_traits_from_interaction(
+                        character_id,
+                        content,
+                        intensity=1.0  # Impact fort des messages utilisateur
+                    )
                 except Exception as e:
                     logger.error(
-                        f"Erreur lors de la création de la mémoire: {e}")
+                        f"Erreur lors du traitement du message utilisateur: {e}")
+
+            elif role == "assistant":
+                # Les réponses du personnage reflètent également ses traits
+                try:
+                    # Mettre à jour les traits de personnalité basés sur la réponse
+                    # (impact plus faible car c'est une expression de traits existants)
+                    self.character_manager.update_traits_from_interaction(
+                        character_id,
+                        content,
+                        intensity=0.3  # Impact plus faible des réponses du personnage
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Erreur lors du traitement de la réponse du personnage: {e}")
 
             db_manager.commit()
 

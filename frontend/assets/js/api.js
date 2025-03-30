@@ -9,6 +9,8 @@ class AleziaAPI {
         this.loadApiConfig();
         this.baseUrl = `http://localhost:${this.apiPort}`;
         this.connected = false;
+        this.apiUrl = null;
+        this.initPromise = this.initialize();
     }
 
     /**
@@ -659,6 +661,113 @@ class AleziaAPI {
         return await this.fetchAPI(`/memories/${memoryId}`, {
             method: 'DELETE'
         });
+    }
+
+    // ==== API Traits de personnalité ====
+
+    /**
+     * Récupère les traits de personnalité d'un personnage
+     * @param {number} characterId - ID du personnage
+     * @returns {Promise<Object>} - Données des traits
+     */
+    async getCharacterTraits(characterId) {
+        await this.initPromise;
+        const url = `${this.apiUrl}/characters/${characterId}/traits`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || "Erreur lors de la récupération des traits");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Erreur lors de la récupération des traits:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Récupère l'historique des changements de traits d'un personnage
+     * @param {number} characterId - ID du personnage
+     * @param {string|null} traitName - Nom du trait (optionnel)
+     * @returns {Promise<Array>} - Historique des changements
+     */
+    async getTraitHistory(characterId, traitName = null) {
+        await this.initPromise;
+        let url = `${this.apiUrl}/characters/${characterId}/traits/history`;
+        if (traitName) {
+            url += `?trait_name=${encodeURIComponent(traitName)}`;
+        }
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || "Erreur lors de la récupération de l'historique");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Erreur lors de la récupération de l'historique:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Met à jour un trait de personnalité
+     * @param {number} characterId - ID du personnage
+     * @param {string} traitName - Nom du trait
+     * @param {number} value - Nouvelle valeur (-1.0 à 1.0)
+     * @param {string} reason - Raison du changement
+     * @returns {Promise<Object>} - Résultat de la mise à jour
+     */
+    async updateCharacterTrait(characterId, traitName, value, reason) {
+        await this.initPromise;
+        const url = `${this.apiUrl}/characters/${characterId}/traits/${traitName}`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    value: value,
+                    reason: reason
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || "Erreur lors de la mise à jour du trait");
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error("Erreur lors de la mise à jour du trait:", error);
+            throw error;
+        }
+    }
+
+    /**
+     * Récupère l'état actuel d'un personnage, y compris ses traits actifs
+     * @param {number} characterId - ID du personnage
+     * @returns {Promise<Object>} - État du personnage
+     */
+    async getCharacterState(characterId) {
+        await this.initPromise;
+        const url = `${this.apiUrl}/characters/${characterId}/state`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.detail || "Erreur lors de la récupération de l'état");
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Erreur lors de la récupération de l'état:", error);
+            throw error;
+        }
     }
 }
 

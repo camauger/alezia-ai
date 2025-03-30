@@ -1,0 +1,18 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Évolution des personnages
+
+Évolution dynamique des personnalités et relations basée sur les interactions.
+
+Actuellement, le système peut extraire des faits des conversations et maintenir une mémoire, mais les personnages ne changent pas vraiment au fil du temps. Voici quelques améliorations concrètes:
+
+1. Créer un système d'évolution de personnalité qui ajuste les traits de caractère en fonction des interactions
+
+2. Développer un mécanisme d'évolution des relations qui modifie la façon dont un personnage perçoit l'utilisateur au fil du temps
+
+3. Ajouter des "moments décisifs" qui peuvent provoquer des changements plus importants dans la personnalité d'un personnage
+
+Cette étape permettrait aux personnages de devenir vraiment évolutifs, s'adaptant à leurs expériences et renforçant l'impression d'interagir avec une entité consciente et changeante.
