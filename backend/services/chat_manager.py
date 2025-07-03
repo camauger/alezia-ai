@@ -57,12 +57,12 @@ class ChatManager:
     def get_character_sessions(self, character_id: int, limit: int = 10) -> List[Dict[str, Any]]:
         """Récupère les sessions de chat pour un personnage"""
         query = "SELECT * FROM sessions WHERE character_id = ? ORDER BY start_time DESC LIMIT ?"
-        sessions = db_manager.execute_query(query, (character_id, limit))
+        sessions: List[Dict[str, Any]] | Dict[str, Any] | None = db_manager.execute_query(query, (character_id, limit))
         return sessions
 
     async def send_message(self, session_id: int, content: str, is_user: bool = True) -> Dict[str, Any]:
         """Envoie un message dans une session et génère une réponse si nécessaire"""
-        session = self.get_session(session_id)
+        session: Dict[str, Any] | None = self.get_session(session_id)
         if not session:
             raise ValueError(f"Session introuvable (ID: {session_id})")
 
@@ -86,7 +86,7 @@ class ChatManager:
             self._store_message_as_memory(character_id, content, is_user=True)
 
             # Générer une réponse
-            response = await self._generate_response(session_id, character_id, content)
+            response: Dict[str, Any] = await self._generate_response(session_id, character_id, content)
 
             if "error" not in response:
                 # Stocker la réponse comme mémoire

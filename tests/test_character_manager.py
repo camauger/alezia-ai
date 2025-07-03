@@ -2,14 +2,16 @@
 Tests unitaires pour le gestionnaire de personnages
 """
 
-from backend.services.character_manager import CharacterManager
-from backend.models.character import CharacterCreate
-import pytest
 import datetime
-from unittest.mock import Mock, patch
-import sys
 import os
+import sys
 from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
+
+from backend.models.character import CharacterCreate
+from backend.services.character_manager import CharacterManager
 
 # Ajouter le répertoire parent au path pour les imports
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -18,7 +20,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 @pytest.fixture
 def db_manager_mock():
     """Fixture pour mocker le gestionnaire de base de données"""
-    with patch('backend.services.character_manager.db_manager') as mock:
+    with patch("backend.services.character_manager.db_manager") as mock:
         # Configurer le mock pour retourner un ID lors de l'insertion
         mock.insert.return_value = 1
 
@@ -33,7 +35,7 @@ def db_manager_mock():
 @pytest.fixture
 def character_manager(db_manager_mock):
     """Fixture pour créer une instance de CharacterManager avec des mocks"""
-    with patch('backend.services.character_manager.memory_manager'):
+    with patch("backend.services.character_manager.memory_manager"):
         return CharacterManager()
 
 
@@ -44,7 +46,9 @@ def test_create_character(character_manager, db_manager_mock):
         name="Test Character",
         description="A test character",
         personality="Friendly",
-        universe_id=1
+        universe_id=1,
+        backstory=None,
+        initial_traits=None,
     )
 
     # Appeler la méthode à tester
@@ -67,7 +71,9 @@ def test_create_character_invalid_universe(character_manager, db_manager_mock):
         name="Test Character",
         description="A test character",
         personality="Friendly",
-        universe_id=999  # ID inexistant
+        universe_id=999,  # ID inexistant
+        backstory=None,
+        initial_traits=None,
     )
 
     # Appeler la méthode à tester
@@ -91,7 +97,7 @@ def test_get_character(character_manager, db_manager_mock):
         "personality": "Friendly",
         "backstory": None,
         "universe_id": 1,
-        "created_at": datetime.datetime.now().isoformat()
+        "created_at": datetime.datetime.now().isoformat(),
     }
 
     # Appeler la méthode à tester

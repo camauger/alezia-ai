@@ -27,7 +27,7 @@ class CharacterStateService:
         relationships = db_manager.execute_query(
             query, (character_id,), fetchall=True)
 
-        relationship = relationships[0] if relationships else {
+        relationship = relationships[0] if relationships else {  # type: ignore
             "sentiment": 0.0,
             "trust": 0.0,
             "familiarity": 0.0
