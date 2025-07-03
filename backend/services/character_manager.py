@@ -3,7 +3,7 @@ Service de gestion des personnages (Facade)
 """
 import logging
 from typing import List, Dict, Any, Optional
-
+from sqlalchemy.orm import Session
 from backend.models.character import Character, CharacterCreate, CharacterSummary, CharacterState, TraitChange, PersonalityTraits
 from .character_service import character_service
 from .relationship_service import relationship_service
@@ -20,59 +20,57 @@ class CharacterManager:
     phased out over time.
     """
 
-    def create_character(self, character: CharacterCreate) -> int:
+    def create_character(self, db: Session, character: CharacterCreate) -> int:
         """Creates a new character"""
-        if character.initial_traits:
-            initial_traits = character.initial_traits
-        else:
-            initial_traits = PersonalityService.DEFAULT_TRAITS
+        db_character = character_service.create_character(db, character)
+        relationship_service.initialize_user_relationship(db, db_character.id)
+        
+        initial_traits = character.initial_traits or PersonalityService.DEFAULT_TRAITS
+        personality_service.initialize_personality_traits(db, db_character.id, initial_traits)
+        
+        return db_character.id
 
-        character_id = character_service.create_character(character, initial_traits)
-        relationship_service.initialize_user_relationship(character_id)
-        personality_service.initialize_personality_traits(character_id, initial_traits)
-        return character_id
-
-    def get_character(self, character_id: int) -> Optional[Character]:
+    def get_character(self, db: Session, character_id: int) -> Optional[Character]:
         """Retrieves a character by their ID"""
-        return character_service.get_character(character_id)
+        return character_service.get_character(db, character_id)
 
-    def get_characters(self, limit: int = None) -> List[CharacterSummary]:
+    def get_characters(self, db: Session, limit: int = None) -> List[CharacterSummary]:
         """Retrieves all characters"""
-        return character_service.get_characters(limit)
+        return character_service.get_characters(db, limit)
 
-    def update_character(self, character_id: int, updates: Dict[str, Any]) -> bool:
+    def update_character(self, db: Session, character_id: int, updates: Dict[str, Any]) -> bool:
         """Updates a character"""
-        return character_service.update_character(character_id, updates)
+        return character_service.update_character(db, character_id, updates) is not None
 
-    def delete_character(self, character_id: int) -> bool:
+    def delete_character(self, db: Session, character_id: int) -> bool:
         """Deletes a character"""
-        return character_service.delete_character(character_id)
+        return character_service.delete_character(db, character_id)
 
-    def get_character_state(self, character_id: int) -> CharacterState:
+    def get_character_state(self, db: Session, character_id: int) -> CharacterState:
         """Retrieve the current state of a character"""
-        return character_state_service.get_character_state(character_id)
+        return character_state_service.get_character_state(db, character_id)
 
-    def update_relationship(self, character_id: int, target_name: str, updates: Dict[str, Any]) -> bool:
+    def update_relationship(self, db: Session, character_id: int, target_name: str, updates: Dict[str, Any]) -> bool:
         """Updates a relationship"""
-        return relationship_service.update_relationship(character_id, target_name, updates)
+        return relationship_service.update_relationship(db, character_id, target_name, updates) is not None
 
-    def get_personality_traits(self, character_id: int) -> PersonalityTraits:
+    def get_personality_traits(self, db: Session, character_id: int) -> PersonalityTraits:
         """Retrieves the personality traits of a character"""
-        return personality_service.get_personality_traits(character_id)
+        return personality_service.get_personality_traits(db, character_id)
 
-    def get_trait_history(self, character_id: int, trait_name: str = None) -> List[TraitChange]:
+    def get_trait_history(self, db: Session, character_id: int, trait_name: str = None) -> List[TraitChange]:
         """Retrieves the history of trait changes for a character"""
-        return personality_service.get_trait_history(character_id, trait_name)
+        return personality_service.get_trait_history(db, character_id, trait_name)
 
-    def update_trait(self, character_id: int, trait_name: str, new_value: float, reason: str) -> bool:
+    def update_trait(self, db: Session, character_id: int, trait_name: str, new_value: float, reason: str) -> bool:
         """Updates the value of a personality trait and records the change"""
-        return personality_service.update_trait(character_id, trait_name, new_value, reason)
+        return personality_service.update_trait(db, character_id, trait_name, new_value, reason) is not None
 
-    def update_traits_from_interaction(self, character_id: int, interaction_text: str, intensity: float = 1.0) -> List[Dict[str, Any]]:
+    def update_traits_from_interaction(self, db: Session, character_id: int, interaction_text: str, intensity: float = 1.0) -> List[Dict[str, Any]]:
         """
         Analyzes the interaction and updates personality traits based on the content
         """
-        return personality_service.update_traits_from_interaction(character_id, interaction_text, intensity)
+        return personality_service.update_traits_from_interaction(db, character_id, interaction_text, intensity)
 
 
 # Global instance of the character manager facade

@@ -2,26 +2,6 @@
 
 This roadmap outlines the plan to implement the improvements suggested in `IMPROVEMENTS.md`. The tasks are organized into milestones, starting with the highest priority items to deliver the most impact early on.
 
-## Milestone 1: Foundational Backend Improvements (High Priority)
-
-This milestone focuses on critical backend refactoring and security improvements that will provide a solid foundation for future development.
-
-### Task 1.1: Secure Configuration with Environment Variables
-- **Goal:** Avoid hardcoding sensitive information and improve configuration flexibility across different environments.
-- **Actions:**
-    1.  Create a `.env.example` file in the root directory to document all required environment variables (e.g., `CORS_ORIGINS`, `DB_PATH`, `LLM_API_URL`).
-    2.  Add `python-decouple` to the `requirements.txt` file.
-    3.  Modify `config.py` to load `CORS_ORIGINS` and other configurations from environment variables using `decouple`.
-- **Reference:** `IMPROVEMENTS.md` - "Avoid Hardcoding CORS Origins"
-
-### Task 1.2: Refactor `CharacterManager`
-- **Goal:** Improve code structure, testability, and maintainability by breaking down the `CharacterManager` god object.
-- **Actions:**
-    1.  Create a new `backend/services` directory structure with the following files: `character_service.py`, `relationship_service.py`, `personality_service.py`, `character_state_service.py`.
-    2.  Carefully move the relevant methods and logic from `character_manager.py` into the new, more focused service files.
-    3.  Update the API routes in `backend/routes/characters.py` to import and use the new services.
-    4.  Initially, `character_manager.py` can be kept as a facade that delegates calls to the new services to minimize breaking changes, with the goal of eventually phasing it out.
-- **Reference:** `IMPROVEMENTS.md` - "Refactor `CharacterManager` into Smaller, Focused Services"
 
 ## Milestone 2: Database and API Enhancements (Medium Priority)
 

@@ -1,59 +1,88 @@
 """
-Module pour les modèles d'univers et leurs éléments
+Module for universe models and their elements
 """
-
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel, Field
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
+from backend.database import Base
 
+class UniverseModel(Base):
+    __tablename__ = "universes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    description = Column(Text)
+    type = Column(String)
+    time_period = Column(String, nullable=True)
+    rules = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+    characters = relationship("CharacterModel", back_populates="universe")
+    elements = relationship("UniverseElementModel", back_populates="universe")
+
+class UniverseElementModel(Base):
+    __tablename__ = "universe_elements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    universe_id = Column(Integer, ForeignKey("universes.id"))
+    name = Column(String)
+    type = Column(String)
+    description = Column(Text)
+    importance = Column(Integer, default=3)
+
+    universe = relationship("UniverseModel", back_populates="elements")
+
+# Pydantic models
 
 class UniverseBase(BaseModel):
-    """Modèle de base pour les univers"""
-    name: str = Field(..., description="Nom de l'univers")
-    description: str = Field(..., description="Description générale de l'univers")
-    type: str = Field(..., description="Type d'univers (fantasy, sci-fi, historical, etc.)")
-    time_period: Optional[str] = Field(None, description="Période temporelle spécifique")
-    rules: Optional[str] = Field(None, description="Règles particulières de cet univers")
+    """Base model for universes"""
+    name: str = Field(..., description="Name of the universe")
+    description: str = Field(..., description="General description of the universe")
+    type: str = Field(..., description="Type of universe (fantasy, sci-fi, historical, etc.)")
+    time_period: Optional[str] = Field(None, description="Specific time period")
+    rules: Optional[str] = Field(None, description="Particular rules of this universe")
 
 
 class UniverseCreate(UniverseBase):
-    """Modèle pour la création d'un univers"""
+    """Model for creating a universe"""
     pass
 
 
 class Universe(UniverseBase):
-    """Modèle complet d'un univers avec ses métadonnées"""
+    """Complete model of a universe with its metadata"""
     id: int
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UniverseElementBase(BaseModel):
-    """Modèle de base pour les éléments d'un univers"""
-    universe_id: int = Field(..., description="ID de l'univers auquel appartient cet élément")
-    name: str = Field(..., description="Nom de l'élément")
-    type: str = Field(..., description="Type d'élément (location, organization, item, concept, etc.)")
-    description: str = Field(..., description="Description détaillée de l'élément")
-    importance: int = Field(3, description="Importance de l'élément dans l'univers (1-5)")
+    """Base model for universe elements"""
+    universe_id: int = Field(..., description="ID of the universe this element belongs to")
+    name: str = Field(..., description="Name of the element")
+    type: str = Field(..., description="Type of element (location, organization, item, concept, etc.)")
+    description: str = Field(..., description="Detailed description of the element")
+    importance: int = Field(3, description="Importance of the element in the universe (1-5)")
 
 
 class UniverseElementCreate(UniverseElementBase):
-    """Modèle pour la création d'un élément d'univers"""
+    """Model for creating a universe element"""
     pass
 
 
 class UniverseElement(UniverseElementBase):
-    """Modèle complet d'un élément d'univers avec ses métadonnées"""
+    """Complete model of a universe element with its metadata"""
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UniverseSummary(BaseModel):
-    """Résumé d'un univers pour les listes"""
+    """Summary of a universe for lists"""
     id: int
     name: str
     type: str
@@ -61,13 +90,13 @@ class UniverseSummary(BaseModel):
     character_count: int = 0
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UniverseDetail(Universe):
-    """Détails complets d'un univers avec ses éléments"""
+    """Complete details of a universe with its elements"""
     elements: List[UniverseElement] = []
     characters: List[dict] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
