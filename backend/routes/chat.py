@@ -6,8 +6,8 @@ import logging
 from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, Depends, Body
 
-from services.chat_service import chat_service
-from models.chat import SessionCreate, MessageCreate, ChatSession, ChatMessage
+from backend.services.chat_service import chat_service
+from backend.models.chat import SessionCreate, MessageCreate, ChatSession, ChatMessage
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)

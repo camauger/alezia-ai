@@ -1,0 +1,29 @@
+[tool.ruff]
+# Same as Black.
+line-length = 88
+indent-width = 4
+
+# List of rules to enable. "F" is for Pyflakes, "E" and "W" are for pycodestyle.
+# "I" is for isort (import sorting).
+select = ["E", "F", "W", "I", "UP"]
+
+# Ignore certain errors.
+# E501: Line too long (handled by the formatter)
+# E731: Do not assign a lambda expression, use a def
+ignore = ["E501", "E731"]
+
+
+[tool.ruff.format]
+# Use single quotes for strings where possible.
+quote-style = "single"
+
+[tool.mypy]
+# Be less strict to start with.
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+
+# The following rules are good for catching real errors but can be disabled
+# if they are too noisy when working with AI-generated code.
+disallow_untyped_defs = false # Allows functions without type hints.
+disallow_incomplete_defs = false # Allows functions with partial type hints.

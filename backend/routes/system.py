@@ -5,8 +5,8 @@ Routes pour les fonctions système
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
 
-from utils.db import db_manager
-from services.llm_service import llm_service
+from backend.utils.db import db_manager
+from backend.services.llm_service import llm_service
 
 router = APIRouter(prefix="/system", tags=["system"])
 

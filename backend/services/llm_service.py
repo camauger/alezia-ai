@@ -8,7 +8,7 @@ import time
 import requests
 from typing import Dict, Any, List, Optional
 
-from config import LLM_CONFIG
+from backend.config import LLM_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -45,16 +45,19 @@ class LLMService:
                 available_models = [model.get("name") for model in models]
 
                 if self.default_model in available_models:
-                    logger.info(f"Modèle {self.default_model} disponible sur Ollama.")
+                    logger.info(
+                        f"Modèle {self.default_model} disponible sur Ollama.")
                     self.mock_mode = False
                     return True
                 else:
-                    logger.warning(f"Modèle {self.default_model} non disponible sur Ollama. Modèles disponibles: {available_models}")
+                    logger.warning(
+                        f"Modèle {self.default_model} non disponible sur Ollama. Modèles disponibles: {available_models}")
                     logger.warning("Passage en mode simulation (mock mode).")
                     self.mock_mode = True
                     return False
             else:
-                logger.error(f"Erreur lors de la vérification des modèles disponibles: {response.status_code}")
+                logger.error(
+                    f"Erreur lors de la vérification des modèles disponibles: {response.status_code}")
                 logger.warning("Passage en mode simulation (mock mode).")
                 self.mock_mode = True
                 return False
@@ -111,7 +114,8 @@ class LLMService:
             if response.status_code == 200:
                 return response.json().get("response", "")
             else:
-                logger.error(f"Erreur lors de la génération de texte: {response.status_code} - {response.text}")
+                logger.error(
+                    f"Erreur lors de la génération de texte: {response.status_code} - {response.text}")
                 return self._generate_mock_response(prompt)
         except Exception as e:
             logger.error(f"Exception lors de la génération de texte: {e}")
@@ -131,7 +135,8 @@ class LLMService:
         character_name = "Personnage"
         if "# PROFIL DE PERSONNAGE:" in prompt:
             try:
-                character_name_line = prompt.split("# PROFIL DE PERSONNAGE:")[1].split("\n")[0].strip()
+                character_name_line = prompt.split("# PROFIL DE PERSONNAGE:")[
+                    1].split("\n")[0].strip()
                 character_name = character_name_line
             except:
                 pass
@@ -182,12 +187,14 @@ class LLMService:
                 "prompt": text
             }
 
-            response = requests.post(f"{self.api_url}/embeddings", json=payload)
+            response = requests.post(
+                f"{self.api_url}/embeddings", json=payload)
 
             if response.status_code == 200:
                 return response.json().get("embedding", [])
             else:
-                logger.error(f"Erreur lors de la génération d'embedding: {response.status_code} - {response.text}")
+                logger.error(
+                    f"Erreur lors de la génération d'embedding: {response.status_code} - {response.text}")
                 # Fallback en mode mock
                 random.seed(hash(text))
                 return [random.uniform(-1, 1) for _ in range(384)]

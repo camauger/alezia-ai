@@ -8,8 +8,8 @@ import datetime
 from typing import List, Dict, Any, Optional, Tuple
 import asyncio
 
-from utils.db import db_manager
-from models.memory import MemoryCreate
+from backend.utils.db import db_manager
+from backend.models.memory import MemoryCreate
 from .llm_service import llm_service
 from .memory_manager import memory_manager
 from .character_manager import character_manager

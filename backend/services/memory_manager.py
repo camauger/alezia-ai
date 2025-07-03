@@ -12,9 +12,9 @@ from pathlib import Path
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from utils.db import db_manager
-from models.memory import Memory, MemoryCreate, RetrievedMemory, Fact, FactCreate
-from config import EMBEDDING_CONFIG
+from backend.utils.db import db_manager
+from backend.models.memory import Memory, MemoryCreate, RetrievedMemory, Fact, FactCreate
+from backend.config import EMBEDDING_CONFIG
 
 logger = logging.getLogger(__name__)
 

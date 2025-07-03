@@ -3,10 +3,10 @@ Gestionnaire des univers et leurs éléments
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
-from utils.db import db_manager
-from models.universe import Universe, UniverseCreate, UniverseElement, UniverseElementCreate, UniverseSummary, UniverseDetail
+from backend.utils.db import db_manager
+from backend.models.universe import Universe, UniverseCreate, UniverseElement, UniverseElementCreate, UniverseSummary, UniverseDetail
 
 logger = logging.getLogger(__name__)
 

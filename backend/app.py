@@ -2,13 +2,13 @@
 Point d'entrée principal de l'API pour le système de JDR avec IA
 """
 
-from routes.system import router as system_router
-from routes.characters import router as characters_router
-from routes.chat import router as chat_router
-from routes.memory import router as memory_router
-from utils.errors import configure_exception_handlers
-from utils.logging_config import setup_logging, configure_http_logging
-from config import API_CONFIG, SECURITY_CONFIG
+from backend.routes.system import router as system_router
+from backend.routes.characters import router as characters_router
+from backend.routes.chat import router as chat_router
+from backend.routes.memory import router as memory_router
+from backend.utils.errors import configure_exception_handlers
+from backend.utils.logging_config import setup_logging, configure_http_logging
+from backend.config import API_CONFIG, SECURITY_CONFIG
 import uvicorn
 import sys
 from pathlib import Path

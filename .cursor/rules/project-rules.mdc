@@ -46,7 +46,7 @@ Le projet est organisé en plusieurs composants clés :
 
 ### 1. Prérequis
 
-Installez [Ollama](https://ollama.com/download) pour votre système d'exploitation et assurez-vous qu'il est en cours d'exécution.
+Installez [Ollama](mdc:https:/ollama.com/download) pour votre système d'exploitation et assurez-vous qu'il est en cours d'exécution.
 
 ### 2. Configuration du projet
 

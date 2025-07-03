@@ -6,8 +6,8 @@ from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException, Query, Body
 import logging
 
-from services.memory_manager import memory_manager
-from models.memory import Memory, Fact, RetrievedMemory, MemoryCreate
+from backend.services.memory_manager import memory_manager
+from backend.models.memory import Memory, Fact, RetrievedMemory, MemoryCreate
 
 router = APIRouter(prefix="/memory", tags=["Memory"])
 logger = logging.getLogger(__name__)
