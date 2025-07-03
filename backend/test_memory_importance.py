@@ -2,14 +2,13 @@
 Script de test pour le système de pondération des mémoires
 """
 
-from backend.utils.db import db_manager
-from backend.services.memory_manager import memory_manager
-from backend.models.memory import MemoryCreate
-import sys
-import os
-import json
 import datetime
-from pprint import pprint
+import os
+import sys
+
+from backend.models.memory import MemoryCreate
+from backend.services.memory_manager import memory_manager
+from backend.utils.db import db_manager
 
 # Ajouter le chemin du projet au PYTHONPATH
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -3,9 +3,8 @@ Script d'initialisation de la base de données
 Crée les structures nécessaires et ajoute un univers par défaut
 """
 
-import sys
-import os
 import datetime
+import sys
 from pathlib import Path
 
 # Ajouter le dossier backend au PYTHONPATH

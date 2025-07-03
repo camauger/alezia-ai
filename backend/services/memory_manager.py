@@ -2,19 +2,24 @@
 Gestionnaire de mémoire pour les personnages
 """
 
-import json
 import datetime
 import logging
-import time
 import re
-from typing import List, Dict, Any, Optional, Tuple
-from pathlib import Path
+import time
+from typing import Dict, List, Optional
+
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from backend.utils.db import db_manager
-from backend.models.memory import Memory, MemoryCreate, RetrievedMemory, Fact, FactCreate
 from backend.config import EMBEDDING_CONFIG
+from backend.models.memory import (
+    Fact,
+    FactCreate,
+    Memory,
+    MemoryCreate,
+    RetrievedMemory,
+)
+from backend.utils.db import db_manager
 
 logger = logging.getLogger(__name__)
 

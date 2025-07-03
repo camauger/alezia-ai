@@ -2,8 +2,8 @@
 Script de test pour vérifier le fonctionnement de FastAPI
 """
 
-from fastapi import FastAPI
 import uvicorn
+from fastapi import FastAPI
 
 app = FastAPI(title="Test API")
 

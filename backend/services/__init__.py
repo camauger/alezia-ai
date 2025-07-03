@@ -3,9 +3,9 @@ Package des services pour l'application Alezia AI
 """
 
 from .character_manager import character_manager
-from .memory_manager import memory_manager
-from .llm_service import llm_service
 from .chat_manager import chat_manager
+from .llm_service import llm_service
+from .memory_manager import memory_manager
 from .universe_manager import universe_manager
 
 __all__ = [

@@ -1,11 +1,13 @@
 """
 Service for managing relationships between characters and the user.
 """
-import logging
 import datetime
-from typing import Dict, Any, Optional
+import logging
+from typing import Any, Dict, Optional
+
 from sqlalchemy.orm import Session
-from backend.models.relationship import RelationshipModel, RelationshipCreate
+
+from backend.models.relationship import RelationshipCreate, RelationshipModel
 
 logger = logging.getLogger(__name__)
 

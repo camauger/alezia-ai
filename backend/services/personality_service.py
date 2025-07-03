@@ -1,11 +1,18 @@
 """
 Service for managing personality traits and their evolution.
 """
-import logging
 import datetime
-from typing import List, Dict, Any, Optional
+import logging
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy.orm import Session
-from backend.models.character import TraitModel, TraitChangeModel, PersonalityTraits, TraitChange
+
+from backend.models.character import (
+    PersonalityTraits,
+    TraitChange,
+    TraitChangeModel,
+    TraitModel,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -1,15 +1,18 @@
 """
 Service for determining a character's current state (mood, etc.).
 """
-import logging
 import datetime
-from typing import List, Dict, Any
+import logging
+from typing import Any
+
 from sqlalchemy.orm import Session
+
 from backend.models.character import CharacterState
 from backend.models.relationship import RelationshipModel
+
+from .character_service import character_service
 from .memory_manager import memory_manager
 from .personality_service import personality_service
-from .character_service import character_service
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +60,8 @@ class CharacterStateService:
             active_traits=active_traits
         )
 
-    def _determine_mood(self, relationship: Dict[str, Any], recent_memories: List[Dict[str, Any]],
-                        traits: Dict[str, float] = None) -> str:
+    def _determine_mood(self, relationship: dict[str, Any], recent_memories: list[dict[str, Any]],
+                        traits: dict[str, float] = None) -> str:
         """Determines the character's mood based on their relationship, recent memories, and personality traits"""
         # ... (same as before)
         sentiment = relationship.get("sentiment", 0.0)

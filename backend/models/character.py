@@ -2,11 +2,14 @@
 Module for character models and their characteristics
 """
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator, root_validator
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, ForeignKey
+from typing import Any, Optional
+
+from pydantic import BaseModel, Field, root_validator, validator
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from backend.database import Base
+
 
 class CharacterModel(Base):
     __tablename__ = "characters"
@@ -89,12 +92,12 @@ class CharacterTrait(BaseModel):
 
 class PersonalityTraits(BaseModel):
     """Collection of personality traits"""
-    traits: List[CharacterTrait] = Field(default_factory=list,
+    traits: list[CharacterTrait] = Field(default_factory=list,
                                          description="List of personality traits")
     last_updated: datetime = Field(default_factory=datetime.now,
                                    description="Date of last trait update")
 
-    def to_dict(self) -> Dict[str, float]:
+    def to_dict(self) -> dict[str, float]:
         """Converts traits to a dictionary {name: value}"""
         return {trait.name: trait.value for trait in self.traits}
 
@@ -141,7 +144,7 @@ class CharacterBase(BaseModel):
 
 class CharacterCreate(CharacterBase):
     """Model for creating a character"""
-    initial_traits: Optional[List[Dict[str, Any]]] = Field(None,
+    initial_traits: Optional[list[dict[str, Any]]] = Field(None,
                                                            description="Initial personality traits")
 
 
@@ -172,16 +175,16 @@ class CharacterState(BaseModel):
     mood: str = Field("neutral",
                       description="Current mood of the character",
                       pattern="^(cheerful|friendly|neutral|annoyed|angry)$")
-    current_context: Dict[str, Any] = Field(default_factory=dict,
+    current_context: dict[str, Any] = Field(default_factory=dict,
                                             description="Current context of the conversation")
-    recent_memories: List[Dict[str, Any]] = Field(default_factory=list,
+    recent_memories: list[dict[str, Any]] = Field(default_factory=list,
                                                   description="Recent memories")
-    relationship_to_user: Dict[str, Any] = Field(
+    relationship_to_user: dict[str, Any] = Field(
         default_factory=lambda: {"sentiment": 0.0,
                                  "trust": 0.0, "familiarity": 0.0},
         description="State of the relationship with the user"
     )
-    active_traits: Optional[Dict[str, float]] = Field(
+    active_traits: Optional[dict[str, float]] = Field(
         default_factory=dict,
         description="Active personality traits with their current values"
     )

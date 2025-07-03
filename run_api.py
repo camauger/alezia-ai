@@ -2,17 +2,18 @@
 Script simple pour démarrer l'API
 """
 
-from backend.config import API_CONFIG
-import os
-import sys
-import socket
-import uvicorn
-import logging
-from pathlib import Path
 import argparse
+import logging
 import signal
+import socket
+import sys
+from pathlib import Path
 from time import sleep
+
 import requests
+import uvicorn
+
+from backend.config import API_CONFIG
 
 # Configurer les chemins d'importation
 current_dir = Path(__file__).resolve().parent
@@ -32,7 +33,7 @@ def is_port_available(port):
         try:
             s.bind((LISTEN_HOST, port))
             return True
-        except socket.error:
+        except OSError:
             return False
 
 
@@ -135,8 +136,8 @@ if __name__ == "__main__":
         logger.info("Démarrage de l'API Alezia...")
 
         try:
-            import uvicorn
             import requests
+            import uvicorn
         except ImportError:
             print(
                 "ERREUR: uvicorn ou requests n'est pas installé. Exécutez 'pip install uvicorn requests'.")

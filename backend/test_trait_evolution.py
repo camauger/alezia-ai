@@ -5,13 +5,13 @@ Script de test pour démontrer l'évolution des traits de personnalité
 en simulant des interactions directes.
 """
 
-from models.character import CharacterCreate
-from services.character_manager import CharacterManager
-import sys
 import logging
+import sys
 import time
 from pathlib import Path
-from datetime import datetime
+
+from models.character import CharacterCreate
+from services.character_manager import CharacterManager
 
 # Ajouter le répertoire parent au chemin Python pour permettre les imports absolus
 sys.path.append(str(Path(__file__).resolve().parent.parent))

@@ -2,11 +2,11 @@
 Service for basic CRUD operations on characters.
 """
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Optional
+
 from sqlalchemy.orm import Session, joinedload
-from backend.database import SessionLocal
-from backend.models.character import CharacterModel, CharacterCreate, CharacterSummary
-from .memory_manager import memory_manager
+
+from backend.models.character import CharacterCreate, CharacterModel
 
 logger = logging.getLogger(__name__)
 
@@ -26,14 +26,14 @@ class CharacterService:
         """Retrieves a character by their ID"""
         return db.query(CharacterModel).options(joinedload(CharacterModel.universe)).filter(CharacterModel.id == character_id).first()
 
-    def get_characters(self, db: Session, limit: int = None) -> List[CharacterModel]:
+    def get_characters(self, db: Session, limit: int = None) -> list[CharacterModel]:
         """Retrieves all characters"""
         query = db.query(CharacterModel).options(joinedload(CharacterModel.universe)).order_by(CharacterModel.name)
         if limit:
             query = query.limit(limit)
         return query.all()
 
-    def update_character(self, db: Session, character_id: int, updates: Dict[str, Any]) -> Optional[CharacterModel]:
+    def update_character(self, db: Session, character_id: int, updates: dict[str, Any]) -> Optional[CharacterModel]:
         """Updates a character"""
         db_character = self.get_character(db, character_id)
         if db_character:

@@ -3,9 +3,9 @@ Script pour optimiser Ollama pour NVIDIA RTX 4060 Laptop GPU (8 Go VRAM)
 Ce script crée un fichier de configuration et un Modelfile optimisés
 """
 
+import json
 import os
 import sys
-import json
 from pathlib import Path
 
 # Répertoire actuel

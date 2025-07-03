@@ -5,8 +5,8 @@ Configuration centralisée du logging pour l'application
 import logging
 import logging.handlers
 import os
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # Niveaux de journalisation personnalisés
 TRACE = 5  # Niveau très détaillé pour le débogage approfondi

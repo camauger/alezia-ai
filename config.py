@@ -4,8 +4,9 @@ Configuration globale de l'application
 
 import os
 from pathlib import Path
-from typing import Dict, Any, List
-from decouple import config, Csv
+from typing import Any, Dict
+
+from decouple import Csv, config
 
 # Port du serveur API
 API_PORT = config("API_PORT", default=8000, cast=int)

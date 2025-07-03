@@ -3,8 +3,9 @@ Script pour vérifier l'état de l'API Alezia AI
 """
 
 import sys
-import requests
 import time
+
+import requests
 
 
 def check_api_health(port, max_attempts=5, timeout=5):
@@ -19,7 +20,7 @@ def check_api_health(port, max_attempts=5, timeout=5):
             if response.status_code == 200:
                 data = response.json()
                 if data.get("status") == "healthy":
-                    print(f"✓ API active et en bonne santé!")
+                    print("✓ API active et en bonne santé!")
                     print(f"✓ Documentation disponible sur {base_url}/docs")
                     return True
                 else:

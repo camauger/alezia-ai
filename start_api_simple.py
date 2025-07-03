@@ -2,10 +2,10 @@
 Script simplifié pour démarrer l'API Alezia AI
 """
 
-import os
 import sys
-import uvicorn
 from pathlib import Path
+
+import uvicorn
 
 # Configuration
 PORT = 8005  # Utiliser un port différent pour éviter les conflits

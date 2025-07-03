@@ -3,8 +3,9 @@ Script simplifié pour démarrer l'API Alezia AI sans rechargement automatique
 """
 
 import sys
-import uvicorn
 from pathlib import Path
+
+import uvicorn
 
 # Configuration
 PORT = 8006  # Utiliser un port différent pour éviter les conflits

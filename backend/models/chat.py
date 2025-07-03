@@ -1,139 +1,140 @@
 """
-Modèles de données pour les conversations
+Data models for conversations
 """
 
-from typing import Dict, List, Optional, Any
 from datetime import datetime
+from typing import Any, Optional
+
 from pydantic import BaseModel, Field
 
 
 class ConversationContext(BaseModel):
-    """Contexte de conversation incluant le profil du personnage et les mémoires pertinentes"""
+    """Conversation context including character profile and relevant memories"""
     character_profile: str = Field(
-        description="Profil complet du personnage formaté pour le modèle"
+        description="Full character profile formatted for the model"
     )
-    recent_messages: Optional[List[Dict[str, Any]]] = Field(
+    recent_messages: Optional[list[dict[str, Any]]] = Field(
         default=[],
-        description="Messages récents de la conversation"
+        description="Recent messages in the conversation"
     )
-    relevant_memories: Optional[List[Dict[str, Any]]] = Field(
+    relevant_memories: Optional[list[dict[str, Any]]] = Field(
         default=[],
-        description="Mémoires pertinentes pour le contexte actuel"
+        description="Relevant memories for the current context"
     )
     system_instructions: Optional[str] = Field(
         default=None,
-        description="Instructions système pour guider le modèle"
+        description="System instructions to guide the model"
     )
-    metadata: Optional[Dict[str, Any]] = Field(
+    metadata: Optional[dict[str, Any]] = Field(
         default=None,
-        description="Métadonnées additionnelles pour le contexte"
+        description="Additional metadata for the context"
     )
 
 
 class MessageMetadata(BaseModel):
-    """Métadonnées pour un message"""
+    """Metadata for a message"""
     generation_time: Optional[float] = Field(
         default=None,
-        description="Temps de génération de la réponse en secondes"
+        description="Response generation time in seconds"
     )
     model: Optional[str] = Field(
         default=None,
-        description="Modèle utilisé pour générer la réponse"
+        description="Model used to generate the response"
     )
     tokens_used: Optional[int] = Field(
         default=None,
-        description="Nombre de tokens utilisés pour générer la réponse"
+        description="Number of tokens used to generate the response"
     )
-    custom_data: Optional[Dict[str, Any]] = Field(
+    custom_data: Optional[dict[str, Any]] = Field(
         default=None,
-        description="Données personnalisées additionnelles"
+        description="Additional custom data"
     )
 
 
 class MessageCreate(BaseModel):
-    """Modèle pour la création d'un message"""
+    """Model for creating a message"""
     session_id: str = Field(
-        description="ID de la session de chat"
+        description="Chat session ID"
     )
     content: str = Field(
-        description="Contenu du message"
+        description="Message content"
     )
     metadata: Optional[MessageMetadata] = Field(
         default=None,
-        description="Métadonnées du message"
+        description="Message metadata"
     )
 
 
 class ChatMessage(BaseModel):
-    """Modèle pour un message de chat"""
+    """Model for a chat message"""
     id: str = Field(
-        description="ID unique du message"
+        description="Unique message ID"
     )
     session_id: str = Field(
-        description="ID de la session de chat"
+        description="Chat session ID"
     )
     content: str = Field(
-        description="Contenu du message"
+        description="Message content"
     )
     sender: str = Field(
-        description="Expéditeur du message (user ou assistant)"
+        description="Message sender (user or assistant)"
     )
     character_id: Optional[int] = Field(
         default=None,
-        description="ID du personnage (pour les messages de l'assistant)"
+        description="Character ID (for assistant messages)"
     )
     timestamp: datetime = Field(
         default_factory=datetime.now,
-        description="Horodatage du message"
+        description="Message timestamp"
     )
-    metadata: Optional[Dict[str, Any]] = Field(
+    metadata: Optional[dict[str, Any]] = Field(
         default=None,
-        description="Métadonnées du message"
+        description="Message metadata"
     )
 
 
 class SessionCreate(BaseModel):
-    """Modèle pour la création d'une session"""
+    """Model for creating a session"""
     character_id: int = Field(
-        description="ID du personnage"
+        description="Character ID"
     )
     user_id: str = Field(
-        description="ID de l'utilisateur"
+        description="User ID"
     )
     context: Optional[ConversationContext] = Field(
         default=None,
-        description="Contexte initial de la conversation"
+        description="Initial conversation context"
     )
 
 
 class ChatSession(BaseModel):
-    """Modèle pour une session de chat"""
+    """Model for a chat session"""
     id: str = Field(
-        description="ID unique de la session"
+        description="Unique session ID"
     )
     user_id: str = Field(
-        description="ID de l'utilisateur"
+        description="User ID"
     )
     character_id: int = Field(
-        description="ID du personnage"
+        description="Character ID"
     )
     created_at: datetime = Field(
         default_factory=datetime.now,
-        description="Date de création de la session"
+        description="Session creation date"
     )
     updated_at: datetime = Field(
         default_factory=datetime.now,
-        description="Date de dernière mise à jour de la session"
+        description="Session last update date"
     )
     active: bool = Field(
         default=True,
-        description="Indique si la session est active"
+        description="Indicates if the session is active"
     )
     context: Optional[ConversationContext] = Field(
         default=None,
-        description="Contexte de la conversation"
+        description="Conversation context"
     )
-    metadata: Optional[Dict[str, Any]] = Field(
+    metadata: Optional[dict[str, Any]] = Field(
         default=None,
-        description="Métadonnées de la session"
+        description="Session metadata"
     )

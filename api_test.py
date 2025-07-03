@@ -2,9 +2,10 @@
 Script de test API minimal
 """
 
-from fastapi import FastAPI, HTTPException
 import uvicorn
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+
 
 # Modèle simple pour un personnage
 class CharacterCreate(BaseModel):

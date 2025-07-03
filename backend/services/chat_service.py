@@ -1,16 +1,16 @@
 """
-Service de gestion des sessions de chat et intégration LLM
+Service for managing chat sessions and LLM integration
 """
 
-import logging
-import uuid
 import json
+import logging
 import time
-from typing import Dict, List, Any, Optional
+import uuid
 from datetime import datetime
+from typing import Any, Optional
 
-from backend.services.llm_service import llm_service
 from backend.services.character_manager import CharacterManager
+from backend.services.llm_service import llm_service
 from backend.services.memory_manager import MemoryManager
 from backend.utils.db import db_manager
 
@@ -18,42 +18,42 @@ logger = logging.getLogger(__name__)
 
 
 class ChatService:
-    """Service pour gérer les sessions de chat et l'intégration avec les LLM"""
+    """Service for managing chat sessions and LLM integration"""
 
     def __init__(self):
-        """Initialise le service de chat"""
-        self.sessions = {}  # Cache des sessions actives
+        """Initializes the chat service"""
+        self.sessions = {}  # Cache for active sessions
         self.character_manager = CharacterManager()
         self.memory_manager = MemoryManager()
 
-    def create_session(self, user_id: str, character_id: int, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def create_session(self, user_id: str, character_id: int, context: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
-        Crée une nouvelle session de chat
+        Creates a new chat session
 
         Args:
-            user_id: ID de l'utilisateur
-            character_id: ID du personnage
-            context: Contexte de conversation optionnel
+            user_id: User ID
+            character_id: Character ID
+            context: Optional conversation context
 
         Returns:
-            Détails de la session créée
+            Details of the created session
         """
         try:
-            # Vérifier que le personnage existe
+            # Check if the character exists
             character = self.character_manager.get_character(character_id)
             if not character:
-                logger.error(f"Personnage {character_id} non trouvé")
-                raise ValueError(f"Personnage {character_id} non trouvé")
+                logger.error(f"Character {character_id} not found")
+                raise ValueError(f"Character {character_id} not found")
 
-            # Générer un ID de session unique
+            # Generate a unique session ID
             session_id = str(uuid.uuid4())
 
-            # Obtenir le contexte de conversation pour ce personnage
+            # Get the conversation context for this character
             if not context:
                 context = self.character_manager.get_character_conversation_context(
                     character_id)
 
-            # Créer l'objet session
+            # Create the session object
             timestamp = datetime.now().isoformat()
             session = {
                 "id": session_id,
@@ -66,7 +66,7 @@ class ChatService:
                 "messages": []
             }
 
-            # Stocker dans la base de données
+            # Store in the database
             session_data = {
                 "id": session_id,
                 "user_id": user_id,
@@ -77,57 +77,57 @@ class ChatService:
                 "active": 1
             }
 
-            # Insérer en utilisant le gestionnaire de DB
+            # Insert using the DB manager
             db_manager.insert("chat_sessions", session_data)
 
-            # Mettre en cache
+            # Cache it
             self.sessions[session_id] = session
 
             return session
 
         except Exception as e:
-            logger.error(f"Erreur lors de la création de session: {e}")
+            logger.error(f"Error creating session: {e}")
             raise
 
-    def get_session(self, session_id: str) -> Dict[str, Any]:
+    def get_session(self, session_id: str) -> dict[str, Any]:
         """
-        Récupère les détails d'une session
+        Retrieves session details
 
         Args:
-            session_id: ID de la session
+            session_id: Session ID
 
         Returns:
-            Détails de la session
+            Session details
         """
-        # Vérifier si en cache
+        # Check if in cache
         if session_id in self.sessions:
             return self.sessions[session_id]
 
-        # Sinon, récupérer depuis la base de données
+        # Otherwise, retrieve from the database
         session = db_manager.get_by_id("chat_sessions", session_id)
 
         if not session:
-            raise ValueError(f"Session {session_id} non trouvée")
+            raise ValueError(f"Session {session_id} not found")
 
-        # Convertir le contexte JSON en dictionnaire
+        # Convert JSON context to a dictionary
         if session.get("context"):
             session["context"] = json.loads(session["context"])
 
-        # Mettre en cache
+        # Cache it
         self.sessions[session_id] = session
 
         return session
 
-    def get_user_sessions(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_user_sessions(self, user_id: str, limit: int = 10) -> list[dict[str, Any]]:
         """
-        Récupère la liste des sessions d'un utilisateur
+        Retrieves a user's session list
 
         Args:
-            user_id: ID de l'utilisateur
-            limit: Nombre maximum de sessions à récupérer
+            user_id: User ID
+            limit: Maximum number of sessions to retrieve
 
         Returns:
-            Liste des sessions
+            List of sessions
         """
         query = "SELECT * FROM chat_sessions WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?"
         sessions = db_manager.execute_query(query, (user_id, limit))
@@ -140,42 +140,42 @@ class ChatService:
 
     def delete_session(self, session_id: str) -> bool:
         """
-        Supprime une session de chat
+        Deletes a chat session
 
         Args:
-            session_id: ID de la session
+            session_id: Session ID
 
         Returns:
-            True si la suppression a réussi
+            True if deletion was successful
         """
         try:
-            # Supprimer les messages associés
+            # Delete associated messages
             db_manager.delete("chat_messages", "session_id = ?", (session_id,))
 
-            # Supprimer la session
+            # Delete the session
             rows_deleted = db_manager.delete(
                 "chat_sessions", "id = ?", (session_id,))
 
-            # Supprimer du cache si présent
+            # Remove from cache if present
             if session_id in self.sessions:
                 del self.sessions[session_id]
 
             return rows_deleted > 0
         except Exception as e:
-            logger.error(f"Erreur lors de la suppression de session: {e}")
+            logger.error(f"Error deleting session: {e}")
             return False
 
-    def get_session_messages(self, session_id: str, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+    def get_session_messages(self, session_id: str, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         """
-        Récupère les messages d'une session
+        Retrieves session messages
 
         Args:
-            session_id: ID de la session
-            limit: Nombre maximum de messages à récupérer
-            offset: Décalage dans la liste des messages
+            session_id: Session ID
+            limit: Maximum number of messages to retrieve
+            offset: Offset in the message list
 
         Returns:
-            Liste des messages
+            List of messages
         """
         query = """
         SELECT * FROM chat_messages
@@ -191,60 +191,60 @@ class ChatService:
 
         return messages
 
-    def _build_conversation_prompt(self, session: Dict[str, Any], user_input: str) -> str:
+    def _build_conversation_prompt(self, session: dict[str, Any], user_input: str) -> str:
         """
-        Construit le prompt pour la conversation
+        Builds the conversation prompt
 
         Args:
-            session: Session de chat
-            user_input: Message de l'utilisateur
+            session: Chat session
+            user_input: User's message
 
         Returns:
-            Prompt formaté pour le LLM
+            Formatted prompt for the LLM
         """
-        # Récupérer le contexte de conversation
+        # Retrieve conversation context
         context = session.get("context", {})
         character_profile = context.get("character_profile", "")
 
-        # Récupérer les messages récents (limité à 10 pour éviter les contextes trop longs)
+        # Retrieve recent messages (limited to 10 to avoid overly long contexts)
         recent_messages = self.get_session_messages(session["id"], limit=10)
 
-        # Construire le prompt
-        prompt = f"""# PROFIL DE PERSONNAGE:
+        # Build the prompt
+        prompt = f"""# CHARACTER PROFILE:
 {character_profile}
 
 # CONVERSATION:
 """
 
-        # Ajouter les messages récents
+        # Add recent messages
         for msg in recent_messages:
             sender = "User" if msg["sender"] == "user" else "Assistant"
             prompt += f"{sender}: {msg['content']}\n"
 
-        # Ajouter le nouveau message de l'utilisateur
+        # Add the new user message
         prompt += f"User: {user_input}\n"
         prompt += "Assistant: "
 
         return prompt
 
-    def send_message(self, session_id: str, user_input: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def send_message(self, session_id: str, user_input: str, metadata: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         """
-        Envoie un message dans une session et génère une réponse
+        Sends a message in a session and generates a response
 
         Args:
-            session_id: ID de la session
-            user_input: Message de l'utilisateur
-            metadata: Métadonnées optionnelles
+            session_id: Session ID
+            user_input: User's message
+            metadata: Optional metadata
 
         Returns:
-            Message généré par le personnage
+            Message generated by the character
         """
         try:
-            # Récupérer la session
+            # Retrieve the session
             session = self.get_session(session_id)
             character_id = session["character_id"]
 
-            # Enregistrer le message de l'utilisateur
+            # Save the user's message
             timestamp = datetime.now().isoformat()
             user_message_id = str(uuid.uuid4())
 
@@ -265,27 +265,27 @@ class ChatService:
                 )
             )
 
-            # Mettre à jour le timestamp de la session
+            # Update the session timestamp
             query = "UPDATE chat_sessions SET updated_at = ? WHERE id = ?"
             db_manager.execute(query, (timestamp, session_id))
 
-            # Trouver les mémoires pertinentes
+            # Find relevant memories
             relevant_memories = self.memory_manager.get_relevant_memories(
                 character_id, user_input)
 
-            # Mettre à jour le contexte de la session avec les mémoires pertinentes
+            # Update the session context with relevant memories
             if "context" not in session:
                 session["context"] = {}
             session["context"]["relevant_memories"] = relevant_memories
 
-            # Construire le prompt pour le LLM
+            # Build the prompt for the LLM
             prompt = self._build_conversation_prompt(session, user_input)
 
-            # Récupérer le système de prompt
+            # Retrieve the system prompt
             system_prompt = session.get("context", {}).get(
-                "system_instructions", "Tu es un assistant IA conversationnel.")
+                "system_instructions", "You are a conversational AI assistant.")
 
-            # Générer la réponse avec le LLM
+            # Generate the response with the LLM
             start_time = time.time()
             try:
                 response_text = llm_service.generate_text(
@@ -293,16 +293,16 @@ class ChatService:
                     system_prompt=system_prompt
                 )
             except Exception as e:
-                logger.error(f"Erreur lors de la génération de réponse: {e}")
+                logger.error(f"Error generating response: {e}")
                 response_text = self._generate_mock_response(prompt)
 
             generation_time = time.time() - start_time
 
-            # Enregistrer la réponse générée
+            # Save the generated response
             assistant_message_id = str(uuid.uuid4())
             assistant_metadata = {
                 "generation_time": generation_time,
-                "model": "llama3"  # À remplacer par le modèle réel du service LLM
+                "model": "llama3"  # To be replaced with the actual model from the LLM service
             }
 
             query = """
@@ -324,17 +324,17 @@ class ChatService:
 
             db_manager.commit()
 
-            # Créer une mémoire à partir de la conversation
+            # Create a memory from the conversation
             memory_content = f"User: {user_input}\n{response_text}"
             memory_type = "conversation"
             self.memory_manager.create_memory(
                 character_id=character_id,
                 content=memory_content,
                 memory_type=memory_type,
-                importance=None  # Laisser le système calculer l'importance
+                importance=None  # Let the system calculate the importance
             )
 
-            # Retourner le message généré
+            # Return the generated message
             return {
                 "id": assistant_message_id,
                 "session_id": session_id,
@@ -346,39 +346,39 @@ class ChatService:
             }
 
         except Exception as e:
-            logger.error(f"Erreur lors de l'envoi du message: {e}")
+            logger.error(f"Error sending message: {e}")
             raise
 
     def _generate_mock_response(self, prompt: str) -> str:
         """
-        Génère une réponse simulée en cas d'échec de génération LLM
+        Generates a mock response in case of LLM generation failure
 
         Args:
-            prompt: Prompt de la conversation
+            prompt: Conversation prompt
 
         Returns:
-            Réponse simulée
+            Mock response
         """
         return llm_service._generate_mock_response(prompt)
 
     def add_message(self, session_id: str, content: str, role: str,
-                    metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+                    metadata: dict[str, Any] = None) -> dict[str, Any]:
         """
-        Ajoute un message à une session de chat
+        Adds a message to a chat session
 
         Args:
-            session_id: ID de la session
-            content: Contenu du message
-            role: Rôle de l'émetteur (user/assistant)
-            metadata: Métadonnées du message
+            session_id: Session ID
+            content: Message content
+            role: Sender's role (user/assistant)
+            metadata: Message metadata
 
         Returns:
-            Message créé
+            Created message
         """
         try:
             session = self.get_session(session_id)
 
-            # Créer le message
+            # Create the message
             timestamp = int(time.time())
             message_id = str(uuid.uuid4())
 
@@ -391,7 +391,7 @@ class ChatService:
                 "metadata": json.dumps(metadata) if metadata else None
             }
 
-            # Insérer en base de données
+            # Insert into the database
             query = """
             INSERT INTO chat_messages (id, session_id, content, role, timestamp, metadata, memory_id)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -409,21 +409,21 @@ class ChatService:
                 )
             )
 
-            # Mettre à jour le timestamp de la session
+            # Update the session timestamp
             query = "UPDATE chat_sessions SET updated_at = ? WHERE id = ?"
             db_manager.execute(query, (timestamp, session_id))
 
             character_id = session.get("character_id")
             if not character_id:
-                logger.warning(f"Session {session_id} n'a pas de character_id")
+                logger.warning(f"Session {session_id} has no character_id")
                 db_manager.commit()
                 return message
 
-            # Mettre à jour les traits de personnalité en fonction du contenu du message
+            # Update personality traits based on message content
             if role == "user":
-                # Les messages de l'utilisateur ont un impact plus fort sur les traits du personnage
+                # User messages have a stronger impact on the character's traits
                 try:
-                    # D'abord créer une mémoire
+                    # First, create a memory
                     memory_id = self.memory_manager.create_memory(
                         content,
                         character_id,
@@ -431,74 +431,74 @@ class ChatService:
                         source=f"chat:{session_id}"
                     )
 
-                    # Mettre à jour le message avec l'ID de la mémoire
+                    # Update the message with the memory ID
                     if memory_id:
                         query = "UPDATE chat_messages SET memory_id = ? WHERE id = ?"
                         db_manager.execute(query, (memory_id, message_id))
                         message["memory_id"] = memory_id
 
-                    # Mettre à jour les traits de personnalité basés sur le contenu
+                    # Update personality traits based on the content
                     self.character_manager.update_traits_from_interaction(
                         character_id,
                         content,
-                        intensity=1.0  # Impact fort des messages utilisateur
+                        intensity=1.0  # Strong impact from user messages
                     )
                 except Exception as e:
                     logger.error(
-                        f"Erreur lors du traitement du message utilisateur: {e}")
+                        f"Error processing user message: {e}")
 
             elif role == "assistant":
-                # Les réponses du personnage reflètent également ses traits
+                # The character's responses also reflect their traits
                 try:
-                    # Mettre à jour les traits de personnalité basés sur la réponse
-                    # (impact plus faible car c'est une expression de traits existants)
+                    # Update personality traits based on the response
+                    # (weaker impact as it's an expression of existing traits)
                     self.character_manager.update_traits_from_interaction(
                         character_id,
                         content,
-                        intensity=0.3  # Impact plus faible des réponses du personnage
+                        intensity=0.3  # Weaker impact from the character's responses
                     )
                 except Exception as e:
                     logger.error(
-                        f"Erreur lors du traitement de la réponse du personnage: {e}")
+                        f"Error processing character response: {e}")
 
             db_manager.commit()
 
-            # Convertir les métadonnées JSON en dictionnaire
+            # Convert JSON metadata to a dictionary
             if message.get("metadata"):
                 message["metadata"] = json.loads(message["metadata"])
 
             return message
 
         except Exception as e:
-            logger.error(f"Erreur lors de l'ajout du message: {e}")
+            logger.error(f"Error adding message: {e}")
             raise
 
-    def generate_response(self, session_id: str, user_message: str) -> Dict[str, Any]:
+    def generate_response(self, session_id: str, user_message: str) -> dict[str, Any]:
         """
-        Génère une réponse automatique à partir d'un message utilisateur
+        Generates an automatic response from a user message
 
         Args:
-            session_id: ID de la session
-            user_message: Message de l'utilisateur
+            session_id: Session ID
+            user_message: User's message
 
         Returns:
-            Message généré par l'assistant
+            Message generated by the assistant
         """
         try:
-            # Ajouter le message de l'utilisateur
+            # Add the user's message
             self.add_message(session_id, user_message, "user")
 
-            # Récupérer la session
+            # Retrieve the session
             session = self.get_session(session_id)
 
-            # Récupérer les messages récents
+            # Retrieve recent messages
             messages = self.get_session_messages(session_id)
 
-            # Générer une réponse
+            # Generate a response
             context = session.get("context", {})
             character_id = session.get("character_id")
 
-            # Obtenir le contexte complet du personnage
+            # Get the full character context
             if character_id:
                 character_context = self.character_manager.get_character_conversation_context(
                     character_id)
@@ -507,19 +507,19 @@ class ChatService:
                         context = {}
                     context.update(character_context)
 
-            # Créer un modèle de réponse vide
+            # Create an empty response model
             timestamp = int(time.time())
             message_id = str(uuid.uuid4())
 
-            # Si on est en mode simulation, générer une réponse fictive
+            # If in simulation mode, generate a mock response
             if context.get("simulation_mode"):
                 response_content = self._generate_mock_response(
                     user_message, messages, context)
             else:
-                # TODO: Intégrer avec le service LLM
-                response_content = f"Je suis désolé, je ne peux pas répondre à ce message pour le moment."
+                # TODO: Integrate with the LLM service
+                response_content = "I'm sorry, I can't respond to this message at the moment."
 
-            # Créer le message de réponse
+            # Create the response message
             response = {
                 "id": message_id,
                 "session_id": session_id,
@@ -529,7 +529,7 @@ class ChatService:
                 "metadata": None
             }
 
-            # Insérer en base de données
+            # Insert into the database
             query = """
             INSERT INTO chat_messages (id, session_id, content, role, timestamp, metadata, memory_id)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -547,7 +547,7 @@ class ChatService:
                 )
             )
 
-            # Mettre à jour le timestamp de la session
+            # Update the session timestamp
             query = "UPDATE chat_sessions SET updated_at = ? WHERE id = ?"
             db_manager.execute(query, (timestamp, session_id))
 
@@ -556,9 +556,9 @@ class ChatService:
             return response
 
         except Exception as e:
-            logger.error(f"Erreur lors de la génération de réponse: {e}")
+            logger.error(f"Error generating response: {e}")
             raise
 
 
-# Instance globale du service de chat
+# Global instance of the chat service
 chat_service = ChatService()

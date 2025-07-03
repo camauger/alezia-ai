@@ -2,11 +2,14 @@
 Module for universe models and their elements
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
+
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from backend.database import Base
+
 
 class UniverseModel(Base):
     __tablename__ = "universes"
@@ -95,8 +98,8 @@ class UniverseSummary(BaseModel):
 
 class UniverseDetail(Universe):
     """Complete details of a universe with its elements"""
-    elements: List[UniverseElement] = []
-    characters: List[dict] = []
+    elements: list[UniverseElement] = []
+    characters: list[dict] = []
 
     class Config:
         from_attributes = True

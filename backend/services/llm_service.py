@@ -5,8 +5,9 @@ Service d'accès aux modèles de langage (LLM)
 import logging
 import random
 import time
+from typing import List, Optional
+
 import requests
-from typing import Dict, Any, List, Optional
 
 from backend.config import LLM_CONFIG
 
@@ -131,53 +132,52 @@ class LLMService:
         Returns:
             Réponse simulée
         """
-        # Extraire le nom du personnage du prompt si disponible
-        character_name = "Personnage"
-        if "# PROFIL DE PERSONNAGE:" in prompt:
+        # Extract character name from the prompt if available
+        character_name = "Character"
+        if "# CHARACTER PROFILE:" in prompt:
             try:
-                character_name_line = prompt.split("# PROFIL DE PERSONNAGE:")[
-                    1].split("\n")[0].strip()
+                character_name_line = prompt.split("# CHARACTER PROFILE:")[1].split("\n")[0].strip()
                 character_name = character_name_line
-            except:
+            except IndexError:
                 pass
 
-        # Déterminer si le prompt contient une question
+        # Determine if the prompt contains a question
         is_question = "?" in prompt.split("\n")[-2]
 
-        # Simulation basique d'une réponse en fonction du contexte
+        # Basic simulation of a response based on context
         responses = [
-            f"Bonjour, je suis {character_name}. Comment puis-je vous aider aujourd'hui ?",
-            f"C'est une question intéressante. En tant que {character_name}, je dirais que cela dépend du contexte.",
-            f"Je comprends votre point de vue. Permettez-moi de vous donner mon avis sur la question.",
-            f"Je ne suis pas sûr de comprendre. Pourriez-vous préciser votre pensée ?",
-            f"C'est un sujet qui me tient à cœur. Je serais ravi d'en discuter davantage.",
-            f"D'après mon expérience, je pense que vous avez raison sur ce point.",
-            f"Je vous remercie de partager cela avec moi. C'est très intéressant."
+            f"Hello, I am {character_name}. How can I help you today?",
+            f"That's an interesting question. As {character_name}, I would say it depends on the context.",
+            "I understand your point of view. Allow me to give you my opinion on the matter.",
+            "I'm not sure I understand. Could you please clarify your thought?",
+            "This is a topic I hold dear. I would be delighted to discuss it further.",
+            "From my experience, I think you are right on this point.",
+            "Thank you for sharing that with me. It's very interesting."
         ]
 
-        # Sélection pseudo-aléatoire d'une réponse
+        # Pseudo-random selection of a response
         seed = sum(ord(c) for c in prompt[-50:])
         random.seed(seed)
 
         selected_response = random.choice(responses)
 
-        # Ajouter une petite variation avec un temps de "réflexion" simulé
+        # Add a small variation with a simulated "thinking" time
         time.sleep(0.5)
 
         return selected_response
 
-    def get_embedding(self, text: str) -> List[float]:
+    def get_embedding(self, text: str) -> list[float]:
         """
-        Obtient l'embedding d'un texte
+        Gets the embedding of a text
 
         Args:
-            text: Texte à encoder
+            text: Text to encode
 
         Returns:
-            Vecteur d'embedding
+            Embedding vector
         """
         if self.mock_mode:
-            # En mode mock, générer un vecteur aléatoire mais déterministe
+            # In mock mode, generate a random but deterministic vector
             random.seed(hash(text))
             return [random.uniform(-1, 1) for _ in range(384)]
 
@@ -194,16 +194,16 @@ class LLMService:
                 return response.json().get("embedding", [])
             else:
                 logger.error(
-                    f"Erreur lors de la génération d'embedding: {response.status_code} - {response.text}")
-                # Fallback en mode mock
+                    f"Error generating embedding: {response.status_code} - {response.text}")
+                # Fallback to mock mode
                 random.seed(hash(text))
                 return [random.uniform(-1, 1) for _ in range(384)]
         except Exception as e:
-            logger.error(f"Exception lors de la génération d'embedding: {e}")
-            # Fallback en mode mock
+            logger.error(f"Exception during embedding generation: {e}")
+            # Fallback to mock mode
             random.seed(hash(text))
             return [random.uniform(-1, 1) for _ in range(384)]
 
 
-# Instance globale du service LLM
+# Global instance of the LLM service
 llm_service = LLMService()

@@ -2,17 +2,17 @@
 Script de vérification de l'API
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Ajout du répertoire parent au path pour les imports
 sys.path.append(str(Path(__file__).resolve().parent))
 
 try:
-    from utils.db import db_manager
     from models.character import CharacterCreate
     from services.character_manager import character_manager
+    from utils.db import db_manager
 
     # Vérifier la base de données
     print("Vérification de la base de données...")
@@ -47,7 +47,7 @@ try:
 
         # Supprimer le personnage
         character_manager.delete_character(character_id)
-        print(f"Personnage supprimé avec succès")
+        print("Personnage supprimé avec succès")
 
     except Exception as e:
         print(f"Erreur lors du test du gestionnaire de personnages: {e}")

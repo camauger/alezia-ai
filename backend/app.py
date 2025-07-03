@@ -2,18 +2,20 @@
 Point d'entrée principal de l'API pour le système de JDR avec IA
 """
 
-from backend.routes.system import router as system_router
+import sys
+from pathlib import Path
+
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.config import API_CONFIG, SECURITY_CONFIG
 from backend.routes.characters import router as characters_router
 from backend.routes.chat import router as chat_router
 from backend.routes.memory import router as memory_router
+from backend.routes.system import router as system_router
 from backend.utils.errors import configure_exception_handlers
-from backend.utils.logging_config import setup_logging, configure_http_logging
-from backend.config import API_CONFIG, SECURITY_CONFIG
-import uvicorn
-import sys
-from pathlib import Path
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.middleware.cors import CORSMiddleware
+from backend.utils.logging_config import configure_http_logging, setup_logging
 
 # Ajouter le répertoire parent au chemin Python pour permettre les imports absolus
 sys.path.append(str(Path(__file__).resolve().parent.parent))

@@ -3,10 +3,13 @@ Module for relationship models between characters
 """
 from datetime import datetime
 from typing import Optional
+
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, ForeignKey
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from backend.database import Base
+
 
 class RelationshipModel(Base):
     __tablename__ = "relationships"

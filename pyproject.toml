@@ -3,6 +3,7 @@
 line-length = 88
 indent-width = 4
 
+[tool.ruff.lint]
 # List of rules to enable. "F" is for Pyflakes, "E" and "W" are for pycodestyle.
 # "I" is for isort (import sorting).
 select = ["E", "F", "W", "I", "UP"]
@@ -11,7 +12,6 @@ select = ["E", "F", "W", "I", "UP"]
 # E501: Line too long (handled by the formatter)
 # E731: Do not assign a lambda expression, use a def
 ignore = ["E501", "E731"]
-
 
 [tool.ruff.format]
 # Use single quotes for strings where possible.

@@ -1,28 +1,28 @@
 """
-Service de gestion des sessions de chat
+Service for managing chat sessions
 """
 
-import logging
-import json
-import datetime
-from typing import List, Dict, Any, Optional, Tuple
 import asyncio
+import datetime
+import logging
+from typing import Any, Optional
 
-from backend.utils.db import db_manager
 from backend.models.memory import MemoryCreate
+from backend.utils.db import db_manager
+
+from .character_manager import character_manager
 from .llm_service import llm_service
 from .memory_manager import memory_manager
-from .character_manager import character_manager
 from .universe_manager import universe_manager
 
 logger = logging.getLogger(__name__)
 
 
 class ChatManager:
-    """Gestionnaire des sessions de chat"""
+    """Chat session manager"""
 
-    def create_session(self, character_id: int) -> Dict[str, Any]:
-        """Crée une nouvelle session de chat"""
+    def create_session(self, character_id: int) -> dict[str, Any]:
+        """Creates a new chat session"""
         session_data = {
             "character_id": character_id,
             "start_time": datetime.datetime.now(),
@@ -32,7 +32,7 @@ class ChatManager:
 
         session_id = db_manager.insert("sessions", session_data)
         logger.info(
-            f"Session créée pour le personnage {character_id} (ID: {session_id})")
+            f"Session created for character {character_id} (ID: {session_id})")
 
         return {
             "id": session_id,
@@ -41,34 +41,34 @@ class ChatManager:
             "messages": []
         }
 
-    def get_session(self, session_id: int) -> Optional[Dict[str, Any]]:
-        """Récupère une session de chat par son ID"""
+    def get_session(self, session_id: int) -> Optional[dict[str, Any]]:
+        """Retrieves a chat session by its ID"""
         session = db_manager.get_by_id("sessions", session_id)
         if not session:
             return None
 
-        # Récupérer les messages de la session
+        # Retrieve session messages
         query = "SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC"
         messages = db_manager.execute_query(query, (session_id,))
 
         session["messages"] = messages
         return session
 
-    def get_character_sessions(self, character_id: int, limit: int = 10) -> List[Dict[str, Any]]:
-        """Récupère les sessions de chat pour un personnage"""
+    def get_character_sessions(self, character_id: int, limit: int = 10) -> list[dict[str, Any]]:
+        """Retrieves chat sessions for a character"""
         query = "SELECT * FROM sessions WHERE character_id = ? ORDER BY start_time DESC LIMIT ?"
-        sessions: List[Dict[str, Any]] | Dict[str, Any] | None = db_manager.execute_query(query, (character_id, limit))
+        sessions: list[dict[str, Any]] | dict[str, Any] | None = db_manager.execute_query(query, (character_id, limit))
         return sessions
 
-    async def send_message(self, session_id: int, content: str, is_user: bool = True) -> Dict[str, Any]:
-        """Envoie un message dans une session et génère une réponse si nécessaire"""
-        session: Dict[str, Any] | None = self.get_session(session_id)
+    async def send_message(self, session_id: int, content: str, is_user: bool = True) -> dict[str, Any]:
+        """Sends a message in a session and generates a response if necessary"""
+        session: dict[str, Any] | None = self.get_session(session_id)
         if not session:
-            raise ValueError(f"Session introuvable (ID: {session_id})")
+            raise ValueError(f"Session not found (ID: {session_id})")
 
         character_id = session["character_id"]
 
-        # Enregistrer le message
+        # Save the message
         message_data = {
             "session_id": session_id,
             "is_user": is_user,
@@ -78,18 +78,18 @@ class ChatManager:
         }
 
         message_id = db_manager.insert("messages", message_data)
-        logger.info(f"Message enregistré (ID: {message_id})")
+        logger.info(f"Message saved (ID: {message_id})")
 
-        # Si c'est un message utilisateur, générer une réponse
+        # If it's a user message, generate a response
         if is_user:
-            # Stocker le message comme mémoire
+            # Store the message as a memory
             self._store_message_as_memory(character_id, content, is_user=True)
 
-            # Générer une réponse
-            response: Dict[str, Any] = await self._generate_response(session_id, character_id, content)
+            # Generate a response
+            response: dict[str, Any] = await self._generate_response(session_id, character_id, content)
 
             if "error" not in response:
-                # Stocker la réponse comme mémoire
+                # Store the response as a memory
                 self._store_message_as_memory(
                     character_id, response["content"], is_user=False)
 
@@ -101,14 +101,14 @@ class ChatManager:
             "timestamp": message_data["timestamp"].isoformat()
         }
 
-    async def _generate_response(self, session_id: int, character_id: int, user_message: str) -> Dict[str, Any]:
-        """Génère une réponse du personnage"""
-        # Récupérer le personnage
+    async def _generate_response(self, session_id: int, character_id: int, user_message: str) -> dict[str, Any]:
+        """Generates a response from the character"""
+        # Retrieve the character
         character = character_manager.get_character(character_id)
         if not character:
-            return {"content": "Erreur: Personnage introuvable", "error": "character_not_found"}
+            return {"content": "Error: Character not found", "error": "character_not_found"}
 
-        # Récupérer l'univers si disponible
+        # Retrieve the universe if available
         universe_description = None
         if character.universe_id:
             universe = universe_manager.get_universe(character.universe_id)
@@ -116,29 +116,29 @@ class ChatManager:
                 universe_description = universe_manager.get_universe_description(
                     universe.id)
 
-        # Récupérer l'état du personnage
+        # Retrieve the character's state
         character_state = character_manager.get_character_state(character_id)
 
-        # Récupérer les mémoires pertinentes
+        # Retrieve relevant memories
         relevant_memories = memory_manager.get_relevant_memories(
             character_id, user_message, limit=5)
         memory_context = ""
         if relevant_memories:
-            memory_context = "Voici quelques souvenirs pertinents pour cette conversation:\n"
+            memory_context = "Here are some relevant memories for this conversation:\n"
             for i, memory in enumerate(relevant_memories):
                 memory_context += f"{i+1}. {memory.content}\n"
 
-        # Récupérer l'historique récent de la conversation
+        # Retrieve recent conversation history
         query = "SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp DESC LIMIT 10"
         recent_messages = db_manager.execute_query(query, (session_id,))
-        recent_messages.reverse()  # Pour avoir l'ordre chronologique
+        recent_messages.reverse()  # To have chronological order
 
         conversation_history = ""
         for msg in recent_messages:
             prefix = "User: " if msg["is_user"] else f"{character.name}: "
             conversation_history += f"{prefix}{msg['content']}\n"
 
-        # Créer le prompt système
+        # Create the system prompt
         system_prompt = await llm_service.create_character_system_prompt(
             character.name,
             character.description,
@@ -150,21 +150,21 @@ class ChatManager:
         if memory_context:
             system_prompt += f"\n\n{memory_context}"
 
-        # Créer le prompt utilisateur
+        # Create the user prompt
         prompt = conversation_history
         if not prompt:
             prompt = f"User: {user_message}\n{character.name}: "
         else:
             prompt += f"User: {user_message}\n{character.name}: "
 
-        # Générer la réponse
+        # Generate the response
         response = await llm_service.generate_response(
             prompt=prompt,
             system_prompt=system_prompt,
             character_state=character_state
         )
 
-        # Enregistrer la réponse comme message
+        # Save the response as a message
         if "error" not in response:
             message_data = {
                 "session_id": session_id,
@@ -184,9 +184,9 @@ class ChatManager:
         return response
 
     def _store_message_as_memory(self, character_id: int, content: str, is_user: bool) -> int:
-        """Stocke un message comme mémoire pour le personnage"""
+        """Stores a message as a memory for the character"""
         memory_type = "user_message" if is_user else "character_message"
-        importance = 1.0  # Importance de base
+        importance = 1.0  # Base importance
 
         memory = MemoryCreate(
             character_id=character_id,
@@ -199,7 +199,7 @@ class ChatManager:
         return memory_id
 
     def end_session(self, session_id: int) -> bool:
-        """Termine une session de chat"""
+        """Ends a chat session"""
         update_data = {
             "end_time": datetime.datetime.now()
         }
@@ -207,46 +207,46 @@ class ChatManager:
             "sessions", update_data, "id = ?", (session_id,))
 
         if rows_updated > 0:
-            # Optionnel: Générer un résumé de la session
+            # Optional: Generate a session summary
             asyncio.create_task(self._generate_session_summary(session_id))
 
         return rows_updated > 0
 
     async def _generate_session_summary(self, session_id: int) -> None:
-        """Génère un résumé de la session (en arrière-plan)"""
+        """Generates a session summary (in the background)"""
         try:
             session = self.get_session(session_id)
             if not session or not session.get("messages"):
                 return
 
-            # Extraire le contenu des messages
+            # Extract message content
             messages_content = ""
             for msg in session["messages"]:
                 prefix = "User" if msg["is_user"] else "Character"
                 messages_content += f"{prefix}: {msg['content']}\n"
 
-            # Créer un prompt pour générer le résumé
-            prompt = f"Résume la conversation suivante en quelques phrases:\n\n{messages_content}\n\nRésumé:"
+            # Create a prompt to generate the summary
+            prompt = f"Summarize the following conversation in a few sentences:\n\n{messages_content}\n\nSummary:"
 
-            # Générer le résumé
+            # Generate the summary
             response = await llm_service.generate_response(
                 prompt=prompt,
                 max_tokens=200
             )
 
-            # Mettre à jour la session avec le résumé
+            # Update the session with the summary
             if "error" not in response:
                 update_data = {
                     "summary": response["content"]
                 }
                 db_manager.update("sessions", update_data,
                                   "id = ?", (session_id,))
-                logger.info(f"Résumé généré pour la session {session_id}")
+                logger.info(f"Summary generated for session {session_id}")
 
         except Exception as e:
             logger.error(
-                f"Erreur lors de la génération du résumé de session: {e}")
+                f"Error generating session summary: {e}")
 
 
-# Instance globale du gestionnaire de chat
+# Global instance of the chat manager
 chat_manager = ChatManager()

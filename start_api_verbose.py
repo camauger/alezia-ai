@@ -2,12 +2,12 @@
 Script verbeux pour démarrer l'API Alezia AI et capturer les erreurs
 """
 
-import os
+import logging
 import sys
 import traceback
-import uvicorn
-import logging
 from pathlib import Path
+
+import uvicorn
 
 # Configuration du logging
 logging.basicConfig(level=logging.DEBUG,

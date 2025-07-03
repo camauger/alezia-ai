@@ -2,10 +2,12 @@
 Routes for character management
 """
 import logging
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Path, Query, Body, Depends
+from typing import Optional
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+
 from backend.database import SessionLocal
 from backend.models.character import CharacterCreate
 from backend.services.character_manager import character_manager

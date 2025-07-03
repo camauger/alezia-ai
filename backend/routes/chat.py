@@ -3,11 +3,11 @@ Routes pour la gestion des conversations
 """
 
 import logging
-from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, HTTPException, Depends, Body
 
+from fastapi import APIRouter, HTTPException
+
+from backend.models.chat import MessageCreate, SessionCreate
 from backend.services.chat_service import chat_service
-from backend.models.chat import SessionCreate, MessageCreate, ChatSession, ChatMessage
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 logger = logging.getLogger(__name__)

@@ -6,10 +6,11 @@ Exécuter ce script pour s'assurer que les modifications du système d'accès à
 de données fonctionnent correctement.
 """
 
-from utils.db import db_manager
-import sys
 import logging
+import sys
 from pathlib import Path
+
+from utils.db import db_manager
 
 # Ajouter le répertoire parent au chemin Python pour permettre les imports absolus
 sys.path.append(str(Path(__file__).resolve().parent.parent))
