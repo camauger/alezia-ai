@@ -13,6 +13,7 @@ from backend.models.character import (
     TraitChange,
     TraitChangeModel,
     TraitModel,
+    CharacterTrait,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,13 +43,13 @@ class PersonalityService:
                 old_value=0.0,
                 new_value=db_trait.value,
                 change_amount=db_trait.value,
-                reason="Initialisation du trait",
+                reason='Initialisation du trait',
             )
             db.add(change)
             db.commit()
 
         logger.info(
-            f"Initialized {len(initial_traits)} traits for character ID {character_id}"
+            f'Initialized {len(initial_traits)} traits for character ID {character_id}'
         )
 
     def get_personality_traits(
@@ -58,7 +59,9 @@ class PersonalityService:
         traits_data = (
             db.query(TraitModel).filter(TraitModel.character_id == character_id).all()
         )
-        return PersonalityTraits(traits=[CharacterTrait.from_orm(trait) for trait in traits_data])
+        return PersonalityTraits(
+            traits=[CharacterTrait.from_orm(trait) for trait in traits_data]
+        )
 
     def get_personality_traits_as_dict(
         self, db: Session, character_id: int
@@ -80,7 +83,10 @@ class PersonalityService:
         )
         if trait_name:
             query = query.join(TraitModel).filter(TraitModel.name == trait_name)
-        return [TraitChange.from_orm(change) for change in query.order_by(TraitChangeModel.timestamp.desc()).all()]
+        return [
+            TraitChange.from_orm(change)
+            for change in query.order_by(TraitChangeModel.timestamp.desc()).all()
+        ]
 
     def update_trait(
         self,
@@ -116,7 +122,7 @@ class PersonalityService:
             db.commit()
             db.refresh(db_trait)
             logger.info(
-                f"Trait {trait_name} updated for character ID {character_id}: {old_value} → {db_trait.value}"
+                f'Trait {trait_name} updated for character ID {character_id}: {old_value} → {db_trait.value}'
             )
         return db_trait
 

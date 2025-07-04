@@ -611,11 +611,10 @@ class AleziaAPI {
      * Récupère les mémoires d'un personnage
      * @param {number} characterId - ID du personnage
      * @param {number} limit - Nombre maximum de mémoires à récupérer
-     * @param {number} offset - Décalage dans la liste des mémoires
      * @returns {Promise<Array>} - Liste des mémoires
      */
-    async getCharacterMemories(characterId, limit = 20, offset = 0) {
-        return await this.fetchAPI(`/memories/character/${characterId}?limit=${limit}&offset=${offset}`);
+    async getCharacterMemories(characterId, limit = 20) {
+        return await this.fetchAPI(`/memory/character/${characterId}/memories?limit=${limit}`);
     }
 
     /**
@@ -624,7 +623,7 @@ class AleziaAPI {
      * @returns {Promise<Object>} - Faits extraits
      */
     async getCharacterFacts(characterId) {
-        return await this.fetchAPI(`/memories/facts/${characterId}`);
+        return await this.fetchAPI(`/memory/character/${characterId}/facts`);
     }
 
     /**
@@ -633,7 +632,7 @@ class AleziaAPI {
      * @returns {Promise<Object>} - Mémoire créée
      */
     async createMemory(memoryData) {
-        return await this.fetchAPI('/memories', {
+        return await this.fetchAPI(`/memory/character/${memoryData.character_id}/memories`, {
             method: 'POST',
             body: JSON.stringify(memoryData)
         });
@@ -646,7 +645,7 @@ class AleziaAPI {
      * @returns {Promise<Object>} - Mémoire mise à jour
      */
     async updateMemory(memoryId, memoryData) {
-        return await this.fetchAPI(`/memories/${memoryId}`, {
+        return await this.fetchAPI(`/memory/memories/${memoryId}`, {
             method: 'PUT',
             body: JSON.stringify(memoryData)
         });
@@ -658,9 +657,50 @@ class AleziaAPI {
      * @returns {Promise<Object>} - Résultat de la suppression
      */
     async deleteMemory(memoryId) {
-        return await this.fetchAPI(`/memories/${memoryId}`, {
+        return await this.fetchAPI(`/memory/memories/${memoryId}`, {
             method: 'DELETE'
         });
+    }
+
+    /**
+     * Met à jour l'importance d'une mémoire
+     * @param {Number} memoryId - ID de la mémoire
+     * @param {Number} importance - Nouvelle valeur d'importance (0-10)
+     * @returns {Promise<Object>} - Résultat de l'opération
+     */
+    async updateMemoryImportance(memoryId, importance) {
+        return await this.fetchAPI(`/memory/memories/${memoryId}/importance`, {
+            method: 'PUT',
+            body: JSON.stringify({ importance })
+        });
+    }
+
+    /**
+     * Exécute un cycle de maintenance sur les mémoires d'un personnage
+     * @param {Number} characterId - ID du personnage
+     * @returns {Promise<Object>} - Statistiques de la maintenance
+     */
+    async runMemoryMaintenance(characterId) {
+        return await this.fetchAPI(`/memory/character/${characterId}/maintenance`, {
+            method: 'POST'
+        });
+    }
+
+    /**
+     * Récupère les mémoires les plus pertinentes pour une requête
+     * @param {Number} characterId - ID du personnage
+     * @param {String} query - Texte de la requête
+     * @param {Object} options - Options supplémentaires (limit, recency_weight, importance_weight)
+     * @returns {Promise<Array>} - Liste des mémoires pertinentes
+     */
+    async getRelevantMemories(characterId, query, options = {}) {
+        const { limit = 5, recencyWeight = 0.3, importanceWeight = 0.4 } = options;
+        const url = new URL(`${this.baseUrl}/memory/character/${characterId}/relevant`);
+        url.searchParams.append('query', query);
+        url.searchParams.append('limit', limit);
+        url.searchParams.append('recency_weight', recencyWeight);
+        url.searchParams.append('importance_weight', importanceWeight);
+        return await this.fetchAPI(url.pathname + url.search);
     }
 
     // ==== API Traits de personnalité ====

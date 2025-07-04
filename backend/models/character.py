@@ -1,7 +1,9 @@
 """
 Module for character models and their characteristics
 """
+
 from datetime import datetime
+from enum import Enum
 from typing import Any, Optional
 
 from pydantic import BaseModel, Field, root_validator, validator
@@ -25,6 +27,9 @@ class CharacterModel(Base):
     universe = relationship("UniverseModel", back_populates="characters")
     traits = relationship("TraitModel", back_populates="character")
     relationships = relationship("RelationshipModel", back_populates="character")
+    memories = relationship("MemoryModel", back_populates="character")
+    facts = relationship("FactModel", back_populates="character")
+
 
 class TraitModel(Base):
     __tablename__ = "personality_traits"
@@ -41,6 +46,7 @@ class TraitModel(Base):
     character = relationship("CharacterModel", back_populates="traits")
     changes = relationship("TraitChangeModel", back_populates="trait")
 
+
 class TraitChangeModel(Base):
     __tablename__ = "trait_changes"
 
@@ -55,36 +61,47 @@ class TraitChangeModel(Base):
 
     trait = relationship("TraitModel", back_populates="changes")
 
+
 # Pydantic models (for API validation and serialization)
+
+from enum import Enum
+
+
+class TraitCategory(str, Enum):
+    EMOTIONAL = "emotional"
+    SOCIAL = "social"
+    BEHAVIORAL = "behavioral"
+    COGNITIVE = "cognitive"
+
 
 class CharacterTrait(BaseModel):
     """Model for a personality trait that can evolve"""
-    name: str = Field(...,
-                      description="Name of the personality trait",
-                      min_length=2,
-                      max_length=50)
-    value: float = Field(...,
-                         description="Numeric value of the trait (-1.0 to 1.0)",
-                         ge=-1.0,
-                         le=1.0)
-    category: str = Field(...,
-                          description="Category of the trait (emotional, social, etc.)",
-                          min_length=2,
-                          max_length=30)
-    description: str = Field(...,
-                             description="Description of what this trait means",
-                             min_length=10)
-    volatility: float = Field(0.2,
-                              description="Ease with which this trait can change (0.0 to 1.0)",
-                              ge=0.0,
-                              le=1.0)
 
-    @validator('value')
+    name: str = Field(
+        ..., description="Name of the personality trait", min_length=2, max_length=50
+    )
+    value: float = Field(
+        ..., description="Numeric value of the trait (-1.0 to 1.0)", ge=-1.0, le=1.0
+    )
+    category: TraitCategory = Field(
+        ..., description="Category of the trait (emotional, social, etc.)"
+    )
+    description: str = Field(
+        ..., description="Description of what this trait means", min_length=10
+    )
+    volatility: float = Field(
+        0.2,
+        description="Ease with which this trait can change (0.0 to 1.0)",
+        ge=0.0,
+        le=1.0,
+    )
+
+    @validator("value")
     def validate_value(cls, v):
         # Ensures the value remains between -1.0 and 1.0
         return max(-1.0, min(1.0, v))
 
-    @validator('volatility')
+    @validator("volatility")
     def validate_volatility(cls, v):
         # Ensures volatility remains between 0.0 and 1.0
         return max(0.0, min(1.0, v))
@@ -95,10 +112,13 @@ class CharacterTrait(BaseModel):
 
 class PersonalityTraits(BaseModel):
     """Collection of personality traits"""
-    traits: list[CharacterTrait] = Field(default_factory=list,
-                                         description="List of personality traits")
-    last_updated: datetime = Field(default_factory=datetime.now,
-                                   description="Date of last trait update")
+
+    traits: list[CharacterTrait] = Field(
+        default_factory=list, description="List of personality traits"
+    )
+    last_updated: datetime = Field(
+        default_factory=datetime.now, description="Date of last trait update"
+    )
 
     def to_dict(self) -> dict[str, float]:
         """Converts traits to a dictionary {name: value}"""
@@ -114,45 +134,47 @@ class PersonalityTraits(BaseModel):
 
 class CharacterBase(BaseModel):
     """Base model for characters"""
-    name: str = Field(...,
-                      description="Name of the character",
-                      min_length=2,
-                      max_length=100)
-    description: str = Field(...,
-                             description="Physical and behavioral description",
-                             min_length=10)
-    personality: str = Field(...,
-                             description="Personality traits and behavior",
-                             min_length=10)
-    backstory: Optional[str] = Field(None,
-                                     description="Personal history of the character")
-    universe_id: Optional[int] = Field(None,
-                                       description="ID of the universe the character belongs to",
-                                       ge=1)
 
-    @validator('name')
+    name: str = Field(
+        ..., description="Name of the character", min_length=2, max_length=100
+    )
+    description: str = Field(
+        ..., description="Physical and behavioral description", min_length=10
+    )
+    personality: str = Field(
+        ..., description="Personality traits and behavior", min_length=10
+    )
+    backstory: Optional[str] = Field(
+        None, description="Personal history of the character"
+    )
+    universe_id: Optional[int] = Field(
+        None, description="ID of the universe the character belongs to", ge=1
+    )
+
+    @validator("name")
     def name_must_be_valid(cls, v):
         if not v.strip():
-            raise ValueError(
-                'Name cannot be empty or contain only spaces')
+            raise ValueError("Name cannot be empty or contain only spaces")
         return v.strip()
 
-    @validator('description', 'personality')
+    @validator("description", "personality")
     def text_fields_must_be_valid(cls, v):
         if not v.strip():
-            raise ValueError(
-                'This field cannot be empty or contain only spaces')
+            raise ValueError("This field cannot be empty or contain only spaces")
         return v.strip()
 
 
 class CharacterCreate(CharacterBase):
     """Model for creating a character"""
-    initial_traits: Optional[list[dict[str, Any]]] = Field(None,
-                                                           description="Initial personality traits")
+
+    initial_traits: Optional[list[dict[str, Any]]] = Field(
+        None, description="Initial personality traits"
+    )
 
 
 class Character(CharacterBase):
     """Complete model of a character with its metadata"""
+
     id: int
     created_at: datetime
     universe: Optional[str] = None
@@ -163,6 +185,7 @@ class Character(CharacterBase):
 
 class CharacterSummary(BaseModel):
     """Summary of a character for lists"""
+
     id: int
     name: str
     description: str
@@ -174,30 +197,33 @@ class CharacterSummary(BaseModel):
 
 class CharacterState(BaseModel):
     """Current state of a character in a session"""
+
     character_id: int
-    mood: str = Field("neutral",
-                      description="Current mood of the character",
-                      pattern="^(cheerful|friendly|neutral|annoyed|angry)$")
-    current_context: dict[str, Any] = Field(default_factory=dict,
-                                            description="Current context of the conversation")
-    recent_memories: list[dict[str, Any]] = Field(default_factory=list,
-                                                  description="Recent memories")
+    mood: str = Field(
+        "neutral",
+        description="Current mood of the character",
+        pattern="^(cheerful|friendly|neutral|annoyed|angry)$",
+    )
+    current_context: dict[str, Any] = Field(
+        default_factory=dict, description="Current context of the conversation"
+    )
+    recent_memories: list[dict[str, Any]] = Field(
+        default_factory=list, description="Recent memories"
+    )
     relationship_to_user: dict[str, Any] = Field(
-        default_factory=lambda: {"sentiment": 0.0,
-                                 "trust": 0.0, "familiarity": 0.0},
-        description="State of the relationship with the user"
+        default_factory=lambda: {"sentiment": 0.0, "trust": 0.0, "familiarity": 0.0},
+        description="State of the relationship with the user",
     )
     active_traits: Optional[dict[str, float]] = Field(
         default_factory=dict,
-        description="Active personality traits with their current values"
+        description="Active personality traits with their current values",
     )
 
-    @validator('mood')
+    @validator("mood")
     def mood_must_be_valid(cls, v):
         valid_moods = ["cheerful", "friendly", "neutral", "annoyed", "angry"]
         if v not in valid_moods:
-            raise ValueError(
-                f'Invalid mood. Accepted values: {", ".join(valid_moods)}')
+            raise ValueError(f'Invalid mood. Accepted values: {", ".join(valid_moods)}')
         return v
 
     class Config:
@@ -206,6 +232,7 @@ class CharacterState(BaseModel):
 
 class TraitChange(BaseModel):
     """Represents a change in a personality trait"""
+
     trait_name: str
     old_value: float
     new_value: float
@@ -215,9 +242,9 @@ class TraitChange(BaseModel):
 
     @root_validator(skip_on_failure=True)
     def compute_change(cls, values):
-        old = values.get('old_value', 0)
-        new = values.get('new_value', 0)
-        values['change_amount'] = new - old
+        old = values.get("old_value", 0)
+        new = values.get("new_value", 0)
+        values["change_amount"] = new - old
         return values
 
     class Config:

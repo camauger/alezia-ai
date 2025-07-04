@@ -20,11 +20,11 @@ class LLMService:
     def __init__(self):
         """Initializes the LLM service"""
         self.config = LLM_CONFIG
-        self.api_url = self.config.get("api_url", "http://localhost:11434/api")
-        self.default_model = self.config.get("default_model", "llama3")
-        self.mock_mode = self.config.get("mock_mode", True)
-        self.temperature = self.config.get("temperature", 0.7)
-        self.max_tokens = self.config.get("max_tokens", 1024)
+        self.api_url = self.config.get('api_url', 'http://localhost:11434/api')
+        self.default_model = self.config.get('default_model', 'llama3')
+        self.mock_mode = self.config.get('mock_mode', True)
+        self.temperature = self.config.get('temperature', 0.7)
+        self.max_tokens = self.config.get('max_tokens', 1024)
 
         # Check model availability
         if not self.mock_mode:
@@ -39,33 +39,32 @@ class LLMService:
         """
         try:
             # Retrieve the list of available models
-            response = requests.get(f"{self.api_url}/tags")
+            response = requests.get(f'{self.api_url}/tags')
 
             if response.status_code == 200:
-                models = response.json().get("models", [])
-                available_models = [model.get("name") for model in models]
+                models = response.json().get('models', [])
+                available_models = [model.get('name') for model in models]
 
                 if self.default_model in available_models:
-                    logger.info(
-                        f"Model {self.default_model} available on Ollama.")
+                    logger.info(f'Model {self.default_model} available on Ollama.')
                     self.mock_mode = False
                     return True
                 else:
                     logger.warning(
-                        f"Model {self.default_model} not available on Ollama. Available models: {available_models}")
-                    logger.warning("Switching to mock mode.")
+                        f'Model {self.default_model} not available on Ollama. Available models: {available_models}'
+                    )
+                    logger.warning('Switching to mock mode.')
                     self.mock_mode = True
                     return False
             else:
-                logger.error(
-                    f"Error checking available models: {response.status_code}")
-                logger.warning("Switching to mock mode.")
+                logger.error(f'Error checking available models: {response.status_code}')
+                logger.warning('Switching to mock mode.')
                 self.mock_mode = True
                 return False
 
         except Exception as e:
-            logger.error(f"Exception while checking model: {e}")
-            logger.warning("Switching to mock mode.")
+            logger.error(f'Exception while checking model: {e}')
+            logger.warning('Switching to mock mode.')
             self.mock_mode = True
             return False
 
@@ -75,7 +74,7 @@ class LLMService:
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
     ) -> str:
         """
         Generates text from a prompt using the configured model
@@ -99,27 +98,28 @@ class LLMService:
 
         # Prepare parameters for the Ollama API
         payload = {
-            "model": model,
-            "prompt": prompt,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": False
+            'model': model,
+            'prompt': prompt,
+            'temperature': temperature,
+            'max_tokens': max_tokens,
+            'stream': False,
         }
 
         if system_prompt:
-            payload["system"] = system_prompt
+            payload['system'] = system_prompt
 
         try:
-            response = requests.post(f"{self.api_url}/generate", json=payload)
+            response = requests.post(f'{self.api_url}/generate', json=payload)
 
             if response.status_code == 200:
-                return response.json().get("response", "")
+                return response.json().get('response', '')
             else:
                 logger.error(
-                    f"Error generating text: {response.status_code} - {response.text}")
+                    f'Error generating text: {response.status_code} - {response.text}'
+                )
                 return self._generate_mock_response(prompt)
         except Exception as e:
-            logger.error(f"Exception during text generation: {e}")
+            logger.error(f'Exception during text generation: {e}')
             return self._generate_mock_response(prompt)
 
     def _generate_mock_response(self, prompt: str) -> str:
@@ -133,23 +133,25 @@ class LLMService:
             Mock response
         """
         # Extract character name from the prompt if available
-        character_name = "Character"
-        if "# CHARACTER PROFILE:" in prompt:
+        character_name = 'Character'
+        if '# CHARACTER PROFILE:' in prompt:
             try:
-                character_name_line = prompt.split("# CHARACTER PROFILE:")[1].split("\n")[0].strip()
+                character_name_line = (
+                    prompt.split('# CHARACTER PROFILE:')[1].split('\n')[0].strip()
+                )
                 character_name = character_name_line
             except IndexError:
                 pass
 
         # Basic simulation of a response based on context
         responses = [
-            f"Hello, I am {character_name}. How can I help you today?",
+            f'Hello, I am {character_name}. How can I help you today?',
             f"That's an interesting question. As {character_name}, I would say it depends on the context.",
-            "I understand your point of view. Allow me to give you my opinion on the matter.",
+            'I understand your point of view. Allow me to give you my opinion on the matter.',
             "I'm not sure I understand. Could you please clarify your thought?",
-            "This is a topic I hold dear. I would be delighted to discuss it further.",
-            "From my experience, I think you are right on this point.",
-            "Thank you for sharing that with me. It's very interesting."
+            'This is a topic I hold dear. I would be delighted to discuss it further.',
+            'From my experience, I think you are right on this point.',
+            "Thank you for sharing that with me. It's very interesting.",
         ]
 
         # Pseudo-random selection of a response
@@ -179,24 +181,21 @@ class LLMService:
             return [random.uniform(-1, 1) for _ in range(384)]
 
         try:
-            payload = {
-                "model": self.default_model,
-                "prompt": text
-            }
+            payload = {'model': self.default_model, 'prompt': text}
 
-            response = requests.post(
-                f"{self.api_url}/embeddings", json=payload)
+            response = requests.post(f'{self.api_url}/embeddings', json=payload)
 
             if response.status_code == 200:
-                return response.json().get("embedding", [])
+                return response.json().get('embedding', [])
             else:
                 logger.error(
-                    f"Error generating embedding: {response.status_code} - {response.text}")
+                    f'Error generating embedding: {response.status_code} - {response.text}'
+                )
                 # Fallback to mock mode
                 random.seed(hash(text))
                 return [random.uniform(-1, 1) for _ in range(384)]
         except Exception as e:
-            logger.error(f"Exception during embedding generation: {e}")
+            logger.error(f'Exception during embedding generation: {e}')
             # Fallback to mock mode
             random.seed(hash(text))
             return [random.uniform(-1, 1) for _ in range(384)]
