@@ -16,13 +16,15 @@ from backend.config import EMBEDDING_CONFIG
 from backend.models.memory import (
     Fact,
     FactCreate,
+    FactModel,
     Memory,
     MemoryCreate,
-    RetrievedMemory,
     MemoryModel,
-    FactModel,
+    RetrievedMemory,
 )
 from backend.utils.embedding_loader import get_embedding_model
+
+logger = logging.getLogger(__name__)
 
 
 class MemoryManager:
@@ -31,7 +33,7 @@ class MemoryManager:
     def __init__(self):
         """Initialise le gestionnaire de mémoire"""
         self.embedding_model = get_embedding_model()
-        self.embedding_dimensions = EMBEDDING_CONFIG['dimensions']
+        self.embedding_dimensions = EMBEDDING_CONFIG["dimensions"]
 
     def create_memory(self, db: Session, memory: MemoryCreate) -> MemoryModel:
         """Crée une nouvelle mémoire pour un personnage"""
@@ -39,14 +41,14 @@ class MemoryManager:
 
         # Calculer l'importance si elle n'est pas explicitement définie
         if memory.importance == 1.0:  # Valeur par défaut
-            memory_dict['importance'] = self._calculate_memory_importance(
+            memory_dict["importance"] = self._calculate_memory_importance(
                 memory.content, memory.memory_type
             )
 
         # Générer l'embedding pour le contenu de la mémoire
         if self.embedding_model:
             embedding = self.embedding_model.encode(memory.content)
-            memory_dict['embedding'] = embedding.tolist()
+            memory_dict["embedding"] = embedding.tolist()
 
         db_memory = MemoryModel(**memory_dict)
         db.add(db_memory)
@@ -54,8 +56,10 @@ class MemoryManager:
         db.refresh(db_memory)
 
         # Extraire et stocker les faits si nécessaire
-        if memory.memory_type in ['conversation', 'event', 'observation']:
-            self._extract_facts(db, db_memory.id, memory.character_id, memory.content)
+        if memory.memory_type in ["conversation", "event", "observation"]:
+            self._extract_facts(
+                db, int(db_memory.id), memory.character_id, memory.content
+            )
 
         return db_memory
 
@@ -69,13 +73,13 @@ class MemoryManager:
 
         # 1. Ajustement selon le type de mémoire
         type_weights = {
-            'conversation': 1.0,
-            'event': 1.5,  # Les événements sont généralement plus importants
-            'observation': 0.8,  # Les observations sont souvent moins importantes
-            'thought': 0.9,  # Les pensées sont modérément importantes
-            'facts_extraction': 1.2,  # Les faits extraits ont une importance accrue
-            'user_message': 1.3,  # Les messages de l'utilisateur sont plus importants
-            'character_message': 1.0,  # Les réponses du personnage ont une importance standard
+            "conversation": 1.0,
+            "event": 1.5,  # Les événements sont généralement plus importants
+            "observation": 0.8,  # Les observations sont souvent moins importantes
+            "thought": 0.9,  # Les pensées sont modérément importantes
+            "facts_extraction": 1.2,  # Les faits extraits ont une importance accrue
+            "user_message": 1.3,  # Les messages de l'utilisateur sont plus importants
+            "character_message": 1.0,  # Les réponses du personnage ont une importance standard
         }
 
         importance_multiplier = type_weights.get(memory_type, 1.0)
@@ -84,87 +88,87 @@ class MemoryManager:
 
         # Mots-clés indiquant une information importante
         important_markers = [
-            'important',
-            'crucial',
-            'essentiel',
-            'clé',
-            'vital',
-            'critique',
-            'toujours',
-            'jamais',
-            'adore',
-            'déteste',
-            'aime',
-            'hais',
-            'secret',
-            'confidential',
-            'promesse',
-            'jure',
-            'avoue',
-            'révèle',
-            'découvre',
-            'explique',
-            'comprend',
-            'réalise',
-            'première fois',
-            'dernier',
-            'meilleur',
-            'pire',
+            "important",
+            "crucial",
+            "essentiel",
+            "clé",
+            "vital",
+            "critique",
+            "toujours",
+            "jamais",
+            "adore",
+            "déteste",
+            "aime",
+            "hais",
+            "secret",
+            "confidential",
+            "promesse",
+            "jure",
+            "avoue",
+            "révèle",
+            "découvre",
+            "explique",
+            "comprend",
+            "réalise",
+            "première fois",
+            "dernier",
+            "meilleur",
+            "pire",
         ]
 
         # Expressions temporelles dénotant l'importance
         temporal_markers = [
-            'hier',
+            "hier",
             "aujourd'hui",
-            'demain',
-            'maintenant',
-            'immédiatement',
-            'plus jamais',
-            'toujours',
-            'tous les jours',
+            "demain",
+            "maintenant",
+            "immédiatement",
+            "plus jamais",
+            "toujours",
+            "tous les jours",
         ]
 
         # Indicateurs émotionnels forts
         emotion_markers = [
-            'heureux',
-            'triste',
-            'furieux',
-            'effrayé',
-            'excité',
-            'nerveux',
-            'angoissé',
-            'terrifié',
-            'ravi',
-            'extatique',
-            'traumatisé',
-            'choqué',
-            'surpris',
-            'ému',
-            'frustré',
-            'énervé',
-            'déçu',
-            'fier',
-            'honteux',
-            'coupable',
-            'embarrassé',
+            "heureux",
+            "triste",
+            "furieux",
+            "effrayé",
+            "excité",
+            "nerveux",
+            "angoissé",
+            "terrifié",
+            "ravi",
+            "extatique",
+            "traumatisé",
+            "choqué",
+            "surpris",
+            "ému",
+            "frustré",
+            "énervé",
+            "déçu",
+            "fier",
+            "honteux",
+            "coupable",
+            "embarrassé",
         ]
 
         # Informations personnelles ou identitaires
         identity_markers = [
-            'mon nom',
+            "mon nom",
             "je m'appelle",
-            'je suis',
-            'ma ville',
-            'mon âge',
-            'mon adresse',
-            'mon travail',
-            'ma famille',
-            'mes enfants',
-            'mon père',
-            'ma mère',
-            'mon frère',
-            'ma sœur',
-            'ma date de naissance',
+            "je suis",
+            "ma ville",
+            "mon âge",
+            "mon adresse",
+            "mon travail",
+            "ma famille",
+            "mes enfants",
+            "mon père",
+            "ma mère",
+            "mon frère",
+            "ma sœur",
+            "ma date de naissance",
         ]
 
         # Calculer les scores en fonction du nombre d'occurrences
@@ -183,10 +187,10 @@ class MemoryManager:
 
         # 3. Analyse des structures grammaticales
         # Compter les questions (suggérant une demande d'information importante)
-        question_count = content.count('?') * 0.4
+        question_count = content.count("?") * 0.4
 
         # Compter les exclamations (suggérant une émotion forte)
-        exclamation_count = content.count('!') * 0.3
+        exclamation_count = content.count("!") * 0.3
 
         # 4. Complexité et détail (longueur et richesse du texte)
         word_count = len(content_lower.split())
@@ -214,7 +218,148 @@ class MemoryManager:
     ) -> list[int]:
         """Extrait des faits à partir du contenu d'une mémoire et les stocke"""
         facts = []
-        # ... (implementation remains the same, but we need to use the db session)
+
+        try:
+            # Patterns simples pour extraire des faits de base
+            fact_patterns = [
+                # "Je m'appelle X" -> ("user", "s'appelle", "X")
+                (r"je m'appelle ([A-Z][a-zA-Z\s-]+)", "user", "s'appelle"),
+                # "Mon nom est X" -> ("user", "a pour nom", "X")
+                (r"mon nom est ([A-Z][a-zA-Z\s-]+)", "user", "a pour nom"),
+                # "J'ai X ans" -> ("user", "a pour âge", "X ans")
+                (r"j'ai (\d+) ans?", "user", "a pour âge"),
+                # "Je suis X" -> ("user", "est", "X")
+                (r"je suis (un|une) ([a-zA-Z\s-]+)", "user", "est"),
+                # "J'habite à X" -> ("user", "habite à", "X")
+                (r"j'habite (?:à|en|au|aux) ([a-zA-Z\s-]+)", "user", "habite à"),
+                # "J'aime X" -> ("user", "aime", "X")
+                (r"j'aime (?:le|la|les|l') ([a-zA-Z\s-]+)", "user", "aime"),
+                # "Je déteste X" -> ("user", "déteste", "X")
+                (r"je déteste (?:le|la|les|l') ([a-zA-Z\s-]+)", "user", "déteste"),
+                # "Mon travail est X" -> ("user", "travaille comme", "X")
+                (r"mon travail est ([a-zA-Z\s-]+)", "user", "travaille comme"),
+                # "Je travaille comme X" -> ("user", "travaille comme", "X")
+                (r"je travaille comme ([a-zA-Z\s-]+)", "user", "travaille comme"),
+                # "Ma passion est X" -> ("user", "a pour passion", "X")
+                (r"ma passion est ([a-zA-Z\s-]+)", "user", "a pour passion"),
+                # "Je fais X" -> ("user", "fait", "X")
+                (r"je fais (?:du|de la|de l'|des) ([a-zA-Z\s-]+)", "user", "fait"),
+            ]
+
+            content_lower = content.lower()
+
+            for pattern, subject, predicate in fact_patterns:
+                matches = re.findall(pattern, content_lower, re.IGNORECASE)
+                for match in matches:
+                    if isinstance(match, tuple):
+                        # Pour les patterns avec plusieurs groupes
+                        object_value = " ".join(match).strip()
+                    else:
+                        object_value = match.strip()
+
+                    if object_value and len(object_value) > 1:
+                        # Vérifier si ce fait existe déjà
+                        existing_fact = (
+                            db.query(FactModel)
+                            .filter(
+                                FactModel.character_id == character_id,
+                                FactModel.subject == subject,
+                                FactModel.predicate == predicate,
+                                FactModel.object == object_value,
+                            )
+                            .first()
+                        )
+
+                        if not existing_fact:
+                            # Créer le nouveau fait
+                            fact_data = FactCreate(
+                                character_id=character_id,
+                                subject=subject,
+                                predicate=predicate,
+                                object=object_value,
+                                confidence=0.8,  # Confiance par défaut pour l'extraction automatique
+                                source_memory_id=memory_id,
+                            )
+
+                            db_fact = FactModel(**fact_data.model_dump())
+                            db.add(db_fact)
+                            db.commit()
+                            db.refresh(db_fact)
+                            facts.append(db_fact.id)
+
+                            logger.debug(
+                                f"Fait extrait: {subject} {predicate} {object_value} "
+                                f"(confiance: {fact_data.confidence})"
+                            )
+                        else:
+                            # Mise à jour de la confiance si le fait existe déjà
+                            existing_fact.confidence = min(
+                                1.0, existing_fact.confidence + 0.1
+                            )
+                            existing_fact.last_confirmed = datetime.datetime.now()
+                            db.commit()
+                            facts.append(existing_fact.id)
+
+            # Patterns avancés pour extraire des relations émotionnelles
+            emotion_patterns = [
+                # "X me rend heureux/triste/etc."
+                (
+                    r"([a-zA-Z\s-]+) me rend (heureux|triste|nerveux|calme|fier)",
+                    "emotional_response",
+                ),
+                # "J'ai peur de X"
+                (r"j'ai peur de ([a-zA-Z\s-]+)", "a peur de"),
+            ]
+
+            for pattern, predicate in emotion_patterns:
+                matches = re.findall(pattern, content_lower, re.IGNORECASE)
+                for match in matches:
+                    if isinstance(match, tuple) and len(match) == 2:
+                        subject_value = match[0].strip()
+                        emotion = match[1].strip()
+
+                        if predicate == "emotional_response":
+                            predicate_value = f"rend {emotion}"
+                        else:
+                            predicate_value = predicate
+
+                        if subject_value and len(subject_value) > 1:
+                            existing_fact = (
+                                db.query(FactModel)
+                                .filter(
+                                    FactModel.character_id == character_id,
+                                    FactModel.subject == subject_value,
+                                    FactModel.predicate == predicate_value,
+                                    FactModel.object == "user",
+                                )
+                                .first()
+                            )
+
+                            if not existing_fact:
+                                fact_data = FactCreate(
+                                    character_id=character_id,
+                                    subject=subject_value,
+                                    predicate=predicate_value,
+                                    object="user",
+                                    confidence=0.7,
+                                    source_memory_id=memory_id,
+                                )
+
+                                db_fact = FactModel(**fact_data.model_dump())
+                                db.add(db_fact)
+                                db.commit()
+                                db.refresh(db_fact)
+                                facts.append(db_fact.id)
+
+            if facts:
+                logger.info(
+                    f"Extraction de faits terminée: {len(facts)} faits extraits de la mémoire {memory_id}"
+                )
+
+        except Exception as e:
+            logger.error(f"Erreur lors de l'extraction de faits: {e}")
+            # Ne pas faire échouer la création de mémoire si l'extraction de faits échoue
+
         return facts
 
     def get_memories(
@@ -367,7 +512,8 @@ class MemoryManager:
             .filter(
                 MemoryModel.character_id == character_id,
                 MemoryModel.created_at < cutoff_date,
-                (MemoryModel.last_accessed is None) | (MemoryModel.last_accessed < cutoff_date),
+                (MemoryModel.last_accessed is None)
+                | (MemoryModel.last_accessed < cutoff_date),
                 MemoryModel.access_count < 5,
             )
             .all()
@@ -397,7 +543,7 @@ class MemoryManager:
         if updated_count > 0:
             db.commit()
             logger.info(
-                f'Dégradation de {updated_count} mémoires anciennes pour le personnage {character_id}'
+                f"Dégradation de {updated_count} mémoires anciennes pour le personnage {character_id}"
             )
 
         return updated_count
@@ -451,13 +597,15 @@ class MemoryManager:
 
                         keep_memory.importance = min(9.0, keep_memory.importance * 1.2)
 
-                        if keep_memory.metadata is None:
-                            keep_memory.metadata = {}
-                        keep_memory.metadata['consolidated_with'] = discard_memory.id
-                        keep_memory.metadata['consolidation_date'] = (
+                        if keep_memory.memory_metadata is None:
+                            keep_memory.memory_metadata = {}
+                        keep_memory.memory_metadata["consolidated_with"] = (
+                            discard_memory.id
+                        )
+                        keep_memory.memory_metadata["consolidation_date"] = (
                             datetime.datetime.now().isoformat()
                         )
-                        keep_memory.metadata['similarity_score'] = similarity
+                        keep_memory.memory_metadata["similarity_score"] = similarity
 
                         db.delete(discard_memory)
                         processed_ids.add(discard_memory.id)
@@ -466,7 +614,7 @@ class MemoryManager:
         if consolidated_count > 0:
             db.commit()
             logger.info(
-                f'Consolidation terminée: {consolidated_count} mémoires fusionnées pour le personnage {character_id}'
+                f"Consolidation terminée: {consolidated_count} mémoires fusionnées pour le personnage {character_id}"
             )
 
         return consolidated_count
@@ -477,10 +625,10 @@ class MemoryManager:
 
         try:
             decay_count = self.decay_old_memories(db, character_id)
-            stats['decayed_memories'] = decay_count
+            stats["decayed_memories"] = decay_count
 
             consolidation_count = self.consolidate_memories(db, character_id)
-            stats['consolidated_memories'] = consolidation_count
+            stats["consolidated_memories"] = consolidation_count
 
             low_importance = (
                 db.query(MemoryModel)
@@ -490,38 +638,21 @@ class MemoryManager:
                 )
                 .count()
             )
-            stats['low_importance_memories'] = low_importance
+            stats["low_importance_memories"] = low_importance
 
             logger.info(
-                f'Cycle de maintenance terminé pour le personnage {character_id}: '
-                f'{decay_count} dégradées, {consolidation_count} consolidées, '
-                f'{low_importance} de faible importance'
+                f"Cycle de maintenance terminé pour le personnage {character_id}: "
+                f"{decay_count} dégradées, {consolidation_count} consolidées, "
+                f"{low_importance} de faible importance"
             )
 
         except Exception as e:
             logger.error(
-                f'Erreur lors du cycle de maintenance pour le personnage {character_id}: {e}'
+                f"Erreur lors du cycle de maintenance pour le personnage {character_id}: {e}"
             )
-            stats['error'] = str(e)
+            stats["error"] = str(e)
 
         return stats
-
-
-class MockEmbeddingModel:
-    """Modèle d'embeddings factice pour les tests"""
-
-    def __init__(self, dimensions: int = 384):
-        """Initialise le modèle factice"""
-        self.dimensions = dimensions
-
-    def encode(self, text: str) -> np.ndarray:
-        """Génère un embedding aléatoire pour le texte"""
-        np.random.seed(hash(text) % 2**32)
-        embedding = np.random.normal(0, 1, self.dimensions)
-        norm = np.linalg.norm(embedding)
-        if norm > 0:
-            embedding = embedding / norm
-        return embedding
 
 
 # Instance globale du gestionnaire de mémoire
