@@ -150,7 +150,7 @@ class AleziaAPI {
 
         try {
             // Utiliser la route system au lieu de llm/status qui n'existe pas encore
-            const response = await fetch(`${this.baseUrl}/system/check-llm`, {
+            const response = await fetch(`${this.baseUrl}/api/system/check-llm`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -175,7 +175,7 @@ class AleziaAPI {
      */
     async getCharacters() {
         try {
-            const response = await fetch(`${this.baseUrl}/characters/`, {
+            const response = await fetch(`${this.baseUrl}/api/characters/`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -199,7 +199,7 @@ class AleziaAPI {
     async createCharacter(character) {
         try {
             console.log('Création de personnage avec les données:', character);
-            const response = await fetch(`${this.baseUrl}/characters/`, {
+            const response = await fetch(`${this.baseUrl}/api/characters/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(character)
@@ -263,7 +263,7 @@ class AleziaAPI {
             console.log(`Envoi d'un message à la session ${sessionId}: ${message}`);
             console.log(`URL de l'API pour l'envoi de message: ${this.baseUrl}/chat/${sessionId}/message`);
 
-            const response = await fetch(`${this.baseUrl}/chat/${sessionId}/message`, {
+            const response = await fetch(`${this.baseUrl}/api/chat/${sessionId}/message`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content: message })
@@ -353,7 +353,7 @@ class AleziaAPI {
             console.log("Données envoyées:", requestData);
 
             // S'assurer d'utiliser le bon chemin avec le slash final
-            const response = await fetch(`${this.baseUrl}/chat/session`, {
+            const response = await fetch(`${this.baseUrl}/api/chat/session`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -382,7 +382,7 @@ class AleziaAPI {
                 // Si l'erreur est 404, essayons avec un slash à la fin
                 if (response.status === 404) {
                     console.log("Tentative avec URL alternative...");
-                    const altResponse = await fetch(`${this.baseUrl}/chat/session/`, {
+                    const altResponse = await fetch(`${this.baseUrl}/api/chat/session/`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -423,7 +423,7 @@ class AleziaAPI {
             // Utiliser l'API réelle de chat
             console.log(`Récupération de l'historique pour la session ${sessionId}`);
 
-            const response = await fetch(`${this.baseUrl}/chat/${sessionId}/history`, {
+            const response = await fetch(`${this.baseUrl}/api/chat/${sessionId}/history`, {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' }
             });

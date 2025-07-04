@@ -124,6 +124,28 @@ CREATE TABLE IF NOT EXISTS messages (
     FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
+-- Table des sessions de chat (nouveau système)
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'default_user',
+    character_id INTEGER NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT,
+    summary TEXT,
+    FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
+);
+
+-- Table des messages de chat (nouveau système)
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id INTEGER NOT NULL,
+    is_user BOOLEAN NOT NULL,
+    content TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    message_metadata TEXT,
+    FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+);
+
 -- Index pour optimiser les requêtes fréquentes
 CREATE INDEX IF NOT EXISTS idx_memories_character_id ON memories(character_id);
 CREATE INDEX IF NOT EXISTS idx_relationships_character_id ON relationships(character_id);
@@ -132,3 +154,7 @@ CREATE INDEX IF NOT EXISTS idx_facts_character_id ON facts(character_id);
 CREATE INDEX IF NOT EXISTS idx_personality_traits_character_id ON personality_traits(character_id);
 CREATE INDEX IF NOT EXISTS idx_trait_changes_character_id ON trait_changes(character_id);
 CREATE INDEX IF NOT EXISTS idx_trait_changes_trait_id ON trait_changes(trait_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_character_id ON chat_sessions(character_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_timestamp ON chat_messages(timestamp);

@@ -299,6 +299,7 @@ Si vous voyez des erreurs comme "Errno 10048" ou "WinError 10013", cela signifie
 - **Réponses lentes**: Si les réponses des personnages sont lentes, considérez utiliser un modèle plus léger comme `gemma:2b`
 - **Mémoire insuffisante**: Fermez d'autres applications gourmandes en RAM ou utilisez un modèle plus petit
 - **Base de données corrompue**: Supprimez le fichier `data/alezia.db` et relancez `python init_db.py`
+- **Erreur "No module named 'utils.db'"**: Assurez-vous d'être dans le dossier racine du projet (alezia-ai) et que l'environnement virtuel est activé
 
 ### Commandes de diagnostic
 

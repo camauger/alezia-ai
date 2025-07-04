@@ -104,6 +104,24 @@ Le script `run_api.py` trouve automatiquement un port libre. Regardez le message
 pip install -r requirements.txt --force-reinstall
 ```
 
+### ❌ "No module named 'utils.db'"
+Si vous voyez cette erreur lors de l'initialisation :
+```bash
+# Assurez-vous d'être dans le bon dossier
+cd alezia-ai
+
+# Relancez l'initialisation
+python init_db.py
+```
+
+### ❌ "Base de données corrompue"
+Si la base fonctionne mal :
+```bash
+# Supprimer et recréer la base
+rm data/alezia.db
+python init_db.py
+```
+
 ## Structure rapide du projet
 
 ```
