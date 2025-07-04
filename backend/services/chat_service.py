@@ -12,7 +12,7 @@ from typing import Any, Optional
 from backend.services.character_manager import CharacterManager
 from backend.services.llm_service import llm_service
 from backend.services.memory_manager import MemoryManager
-from backend.utils.db import db_manager
+from backend.utils.db import db_manager  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,9 @@ class ChatService:
         self.character_manager = CharacterManager()
         self.memory_manager = MemoryManager()
 
-    def create_session(self, user_id: str, character_id: int, context: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def create_session(
+        self, user_id: str, character_id: int, context: Optional[dict[str, Any]] = None
+    ) -> dict[str, Any]:
         """
         Creates a new chat session
 
@@ -40,7 +42,14 @@ class ChatService:
         """
         try:
             # Check if the character exists
-            character = self.character_manager.get_character(character_id)
+            from backend.database import SessionLocal
+
+            db = SessionLocal()
+            try:
+                character = self.character_manager.get_character(db, character_id)
+            finally:
+                db.close()
+
             if not character:
                 logger.error(f"Character {character_id} not found")
                 raise ValueError(f"Character {character_id} not found")
@@ -50,8 +59,7 @@ class ChatService:
 
             # Get the conversation context for this character
             if not context:
-                context = self.character_manager.get_character_conversation_context(
-                    character_id)
+                context = {}
 
             # Create the session object
             timestamp = datetime.now().isoformat()
@@ -63,7 +71,7 @@ class ChatService:
                 "updated_at": timestamp,
                 "context": context,
                 "active": True,
-                "messages": []
+                "messages": [],
             }
 
             # Store in the database
@@ -74,7 +82,7 @@ class ChatService:
                 "created_at": timestamp,
                 "updated_at": timestamp,
                 "context": json.dumps(context),
-                "active": 1
+                "active": 1,
             }
 
             # Insert using the DB manager
@@ -153,8 +161,7 @@ class ChatService:
             db_manager.delete("chat_messages", "session_id = ?", (session_id,))
 
             # Delete the session
-            rows_deleted = db_manager.delete(
-                "chat_sessions", "id = ?", (session_id,))
+            rows_deleted = db_manager.delete("chat_sessions", "id = ?", (session_id,))
 
             # Remove from cache if present
             if session_id in self.sessions:
@@ -165,7 +172,9 @@ class ChatService:
             logger.error(f"Error deleting session: {e}")
             return False
 
-    def get_session_messages(self, session_id: str, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
+    def get_session_messages(
+        self, session_id: str, limit: int = 50, offset: int = 0
+    ) -> list[dict[str, Any]]:
         """
         Retrieves session messages
 
@@ -191,7 +200,9 @@ class ChatService:
 
         return messages
 
-    def _build_conversation_prompt(self, session: dict[str, Any], user_input: str) -> str:
+    def _build_conversation_prompt(
+        self, session: dict[str, Any], user_input: str
+    ) -> str:
         """
         Builds the conversation prompt
 
@@ -227,7 +238,12 @@ class ChatService:
 
         return prompt
 
-    def send_message(self, session_id: str, user_input: str, metadata: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    def send_message(
+        self,
+        session_id: str,
+        user_input: str,
+        metadata: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
         """
         Sends a message in a session and generates a response
 
@@ -261,8 +277,8 @@ class ChatService:
                     user_input,
                     character_id,
                     timestamp,
-                    json.dumps(metadata) if metadata else None
-                )
+                    json.dumps(metadata) if metadata else None,
+                ),
             )
 
             # Update the session timestamp
@@ -271,30 +287,33 @@ class ChatService:
 
             # Find relevant memories
             relevant_memories = self.memory_manager.get_relevant_memories(
-                character_id, user_input)
+                character_id, user_input
+            )
 
             # Update the session context with relevant memories
             if "context" not in session:
                 session["context"] = {}
-            session["context"]["relevant_memories"] = relevant_memories
+            session["context"]["relevant_memories"] = [
+                mem.dict() for mem in relevant_memories
+            ]
 
             # Build the prompt for the LLM
             prompt = self._build_conversation_prompt(session, user_input)
 
             # Retrieve the system prompt
             system_prompt = session.get("context", {}).get(
-                "system_instructions", "You are a conversational AI assistant.")
+                "system_instructions", "You are a conversational AI assistant."
+            )
 
             # Generate the response with the LLM
             start_time = time.time()
             try:
                 response_text = llm_service.generate_text(
-                    prompt=prompt,
-                    system_prompt=system_prompt
+                    prompt=prompt, system_prompt=system_prompt
                 )
             except Exception as e:
                 logger.error(f"Error generating response: {e}")
-                response_text = self._generate_mock_response(prompt)
+                response_text = self._generate_mock_response(prompt, [], {})
 
             generation_time = time.time() - start_time
 
@@ -302,7 +321,7 @@ class ChatService:
             assistant_message_id = str(uuid.uuid4())
             assistant_metadata = {
                 "generation_time": generation_time,
-                "model": "llama3"  # To be replaced with the actual model from the LLM service
+                "model": "llama3",  # To be replaced with the actual model from the LLM service
             }
 
             query = """
@@ -318,20 +337,23 @@ class ChatService:
                     response_text,
                     character_id,
                     datetime.now().isoformat(),
-                    json.dumps(assistant_metadata)
-                )
+                    json.dumps(assistant_metadata),
+                ),
             )
 
             db_manager.commit()
 
             # Create a memory from the conversation
+            from backend.models.memory import MemoryCreate
+
             memory_content = f"User: {user_input}\n{response_text}"
-            memory_type = "conversation"
             self.memory_manager.create_memory(
-                character_id=character_id,
-                content=memory_content,
-                memory_type=memory_type,
-                importance=None  # Let the system calculate the importance
+                MemoryCreate(
+                    character_id=character_id,
+                    content=memory_content,
+                    memory_type="conversation",
+                    importance=1.0,
+                )
             )
 
             # Return the generated message
@@ -342,27 +364,36 @@ class ChatService:
                 "content": response_text,
                 "sender": "assistant",
                 "timestamp": datetime.now().isoformat(),
-                "metadata": assistant_metadata
+                "metadata": assistant_metadata,
             }
 
         except Exception as e:
             logger.error(f"Error sending message: {e}")
             raise
 
-    def _generate_mock_response(self, prompt: str) -> str:
+    def _generate_mock_response(
+        self, user_message: str, messages: list[dict[str, Any]], context: dict[str, Any]
+    ) -> str:
         """
         Generates a mock response in case of LLM generation failure
 
         Args:
-            prompt: Conversation prompt
+            user_message: User's message
+            messages: List of previous messages
+            context: Conversation context
 
         Returns:
             Mock response
         """
-        return llm_service._generate_mock_response(prompt)
+        return llm_service._generate_mock_response(user_message)
 
-    def add_message(self, session_id: str, content: str, role: str,
-                    metadata: dict[str, Any] = None) -> dict[str, Any]:
+    def add_message(
+        self,
+        session_id: str,
+        content: str,
+        role: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Adds a message to a chat session
 
@@ -388,7 +419,7 @@ class ChatService:
                 "content": content,
                 "role": role,
                 "timestamp": timestamp,
-                "metadata": json.dumps(metadata) if metadata else None
+                "metadata": json.dumps(metadata) if metadata else None,
             }
 
             # Insert into the database
@@ -405,8 +436,8 @@ class ChatService:
                     role,
                     timestamp,
                     message["metadata"],
-                    None  # memory_id
-                )
+                    None,  # memory_id
+                ),
             )
 
             # Update the session timestamp
@@ -424,11 +455,16 @@ class ChatService:
                 # User messages have a stronger impact on the character's traits
                 try:
                     # First, create a memory
+                    from backend.models.memory import MemoryCreate
+
                     memory_id = self.memory_manager.create_memory(
-                        content,
-                        character_id,
-                        type="conversation",
-                        source=f"chat:{session_id}"
+                        MemoryCreate(
+                            character_id=character_id,
+                            content=content,
+                            memory_type="conversation",
+                            importance=1.0,
+                            source=f"chat:{session_id}",
+                        )
                     )
 
                     # Update the message with the memory ID
@@ -438,28 +474,40 @@ class ChatService:
                         message["memory_id"] = memory_id
 
                     # Update personality traits based on the content
-                    self.character_manager.update_traits_from_interaction(
-                        character_id,
-                        content,
-                        intensity=1.0  # Strong impact from user messages
-                    )
+                    from backend.database import SessionLocal
+
+                    db = SessionLocal()
+                    try:
+                        self.character_manager.update_traits_from_interaction(
+                            db,
+                            character_id,
+                            content,
+                            intensity=1.0,  # Strong impact from user messages
+                        )
+                    finally:
+                        db.close()
                 except Exception as e:
-                    logger.error(
-                        f"Error processing user message: {e}")
+                    logger.error(f"Error processing user message: {e}")
 
             elif role == "assistant":
                 # The character's responses also reflect their traits
                 try:
                     # Update personality traits based on the response
                     # (weaker impact as it's an expression of existing traits)
-                    self.character_manager.update_traits_from_interaction(
-                        character_id,
-                        content,
-                        intensity=0.3  # Weaker impact from the character's responses
-                    )
+                    from backend.database import SessionLocal
+
+                    db = SessionLocal()
+                    try:
+                        self.character_manager.update_traits_from_interaction(
+                            db,
+                            character_id,
+                            content,
+                            intensity=0.3,  # Weaker impact from the character's responses
+                        )
+                    finally:
+                        db.close()
                 except Exception as e:
-                    logger.error(
-                        f"Error processing character response: {e}")
+                    logger.error(f"Error processing character response: {e}")
 
             db_manager.commit()
 
@@ -500,12 +548,7 @@ class ChatService:
 
             # Get the full character context
             if character_id:
-                character_context = self.character_manager.get_character_conversation_context(
-                    character_id)
-                if character_context:
-                    if not context:
-                        context = {}
-                    context.update(character_context)
+                context = {}
 
             # Create an empty response model
             timestamp = int(time.time())
@@ -514,10 +557,13 @@ class ChatService:
             # If in simulation mode, generate a mock response
             if context.get("simulation_mode"):
                 response_content = self._generate_mock_response(
-                    user_message, messages, context)
+                    user_message, messages, context
+                )
             else:
                 # TODO: Integrate with the LLM service
-                response_content = "I'm sorry, I can't respond to this message at the moment."
+                response_content = (
+                    "I'm sorry, I can't respond to this message at the moment."
+                )
 
             # Create the response message
             response = {
@@ -526,7 +572,7 @@ class ChatService:
                 "content": response_content,
                 "role": "assistant",
                 "timestamp": timestamp,
-                "metadata": None
+                "metadata": None,
             }
 
             # Insert into the database
@@ -543,8 +589,8 @@ class ChatService:
                     "assistant",
                     timestamp,
                     None,  # metadata
-                    None  # memory_id
-                )
+                    None,  # memory_id
+                ),
             )
 
             # Update the session timestamp

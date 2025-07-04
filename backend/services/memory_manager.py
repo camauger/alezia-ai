@@ -6,7 +6,7 @@ import datetime
 import logging
 import re
 import time
-from typing import Dict, List, Optional
+from typing import Optional
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -19,7 +19,7 @@ from backend.models.memory import (
     MemoryCreate,
     RetrievedMemory,
 )
-from backend.utils.db import db_manager
+from backend.utils.db import db_manager  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class MemoryManager:
             logger.info(f"Chargement du modèle d'embeddings {model_name}...")
             start_time = time.time()
 
-            self.embedding_model = SentenceTransformer(
+            self.embedding_model = SentenceTransformer(  # type: ignore
                 model_name,
                 cache_folder=str(cache_dir),
                 device="cuda" if use_gpu else "cpu"
@@ -61,7 +61,7 @@ class MemoryManager:
 
     def create_memory(self, memory: MemoryCreate) -> int:
         """Crée une nouvelle mémoire pour un personnage"""
-        memory_dict = memory.dict()
+        memory_dict = memory.model_dump()
 
         # Ajouter la date de création et initialiser les champs obligatoires
         memory_dict["created_at"] = datetime.datetime.now()
@@ -70,18 +70,18 @@ class MemoryManager:
         # Calculer l'importance si elle n'est pas explicitement définie
         if memory.importance == 1.0:  # Valeur par défaut
             memory_dict["importance"] = self._calculate_memory_importance(
-                memory.content, memory.type)
+                memory.content, memory.memory_type)
 
         # Générer l'embedding pour le contenu de la mémoire
         if self.embedding_model:
-            embedding = self.embedding_model.encode(memory.content).tolist()
-            memory_dict["embedding"] = embedding
+            embedding = self.embedding_model.encode(memory.content)
+            memory_dict["embedding"] = embedding.tolist()
 
         # Ajouter la mémoire à la base de données
         memory_id = db_manager.insert("memories", memory_dict)
 
         # Extraire et stocker les faits si nécessaire
-        if memory.type in ["conversation", "event", "observation"]:
+        if memory.memory_type in ["conversation", "event", "observation"]:
             self._extract_facts(memory_id, memory.character_id, memory.content)
 
         return memory_id
@@ -177,7 +177,7 @@ class MemoryManager:
         # Limiter l'importance entre 0.2 et 9.0
         return min(9.0, max(0.2, total_score))
 
-    def _extract_facts(self, memory_id: int, character_id: int, content: str) -> List[int]:
+    def _extract_facts(self, memory_id: int, character_id: int, content: str) -> list[int]:
         """Extrait des faits à partir du contenu d'une mémoire et les stocke"""
         facts = []
         # Découper le contenu en phrases
@@ -190,11 +190,6 @@ class MemoryManager:
         # 1. EXTRACTION BASÉE SUR LES PATRONS DE PHRASE
 
         # Patrons sujets pour les débuts de phrases
-        subject_patterns = [
-            "je", "tu", "il", "elle", "nous", "vous", "ils", "elles",
-            "mon", "ton", "son", "notre", "votre", "leur",
-            "ce personnage", "le personnage", "cette personne"
-        ]
 
         # Verbes d'action et d'état communs
         action_verbs = [
@@ -253,7 +248,7 @@ class MemoryManager:
                                 confidence=confidence,
                                 source_memory_id=memory_id
                             )
-                            fact_id = db_manager.insert("facts", fact.dict())
+                            fact_id = db_manager.insert("facts", fact.model_dump())
                             facts.append(fact_id)
 
             # 2.2 EXTRACTION D'ATTRIBUTS PERSONNELS
@@ -286,7 +281,7 @@ class MemoryManager:
                                 confidence=confidence,
                                 source_memory_id=memory_id
                             )
-                            fact_id = db_manager.insert("facts", fact.dict())
+                            fact_id = db_manager.insert("facts", fact.model_dump())
                             facts.append(fact_id)
 
             # 2.3 EXTRACTION DE RELATIONS ENTRE PERSONNES
@@ -321,7 +316,7 @@ class MemoryManager:
                                 confidence=confidence,
                                 source_memory_id=memory_id
                             )
-                            fact_id = db_manager.insert("facts", fact.dict())
+                            fact_id = db_manager.insert("facts", fact.model_dump())
                             facts.append(fact_id)
                     elif len(match) >= 3:  # Pour le second pattern
                         subject = match[0]
@@ -337,7 +332,7 @@ class MemoryManager:
                                 confidence=confidence,
                                 source_memory_id=memory_id
                             )
-                            fact_id = db_manager.insert("facts", fact.dict())
+                            fact_id = db_manager.insert("facts", fact.model_dump())
                             facts.append(fact_id)
 
             # 2.4 EXTRACTION DE LOCALISATION
@@ -366,7 +361,7 @@ class MemoryManager:
                                 confidence=0.85,
                                 source_memory_id=memory_id
                             )
-                            fact_id = db_manager.insert("facts", fact.dict())
+                            fact_id = db_manager.insert("facts", fact.model_dump())
                             facts.append(fact_id)
 
             # 2.5 EXTRACTION D'ACTIONS ET ÉVÉNEMENTS
@@ -390,7 +385,7 @@ class MemoryManager:
                                     source_memory_id=memory_id
                                 )
                                 fact_id = db_manager.insert(
-                                    "facts", fact.dict())
+                                    "facts", fact.model_dump())
                                 facts.append(fact_id)
 
             # 2.6 EXTRACTION DE TEMPORALITÉ
@@ -424,7 +419,7 @@ class MemoryManager:
                                     source_memory_id=memory_id
                                 )
                                 fact_id = db_manager.insert(
-                                    "facts", fact.dict())
+                                    "facts", fact.model_dump())
                                 facts.append(fact_id)
 
         # 3. ANALYSES GLOBALES SUR LE CONTENU ENTIER
@@ -475,7 +470,7 @@ class MemoryManager:
 
             linked_memory = MemoryCreate(
                 character_id=character_id,
-                type="facts_extraction",
+                memory_type="facts_extraction",
                 content=facts_summary,
                 importance=importance,
                 metadata={"source_memory_id": memory_id, "fact_ids": facts}
@@ -484,7 +479,7 @@ class MemoryManager:
 
         return facts
 
-    def get_memories(self, character_id: int, limit: int = 100) -> List[Memory]:
+    def get_memories(self, character_id: int, limit: int = 100) -> list[Memory]:
         """Récupère les mémoires d'un personnage"""
         query = "SELECT * FROM memories WHERE character_id = ? ORDER BY created_at DESC LIMIT ?"
         memories = db_manager.execute_query(query, (character_id, limit))
@@ -520,7 +515,7 @@ class MemoryManager:
         limit: int = 5,
         recency_weight: float = 0.3,
         importance_weight: float = 0.4
-    ) -> List[RetrievedMemory]:
+    ) -> list[RetrievedMemory]:
         """Récupère les mémoires les plus pertinentes pour une requête
 
         Args:
@@ -582,7 +577,7 @@ class MemoryManager:
 
             # Stocker les résultats avec tous les scores individuels
             results.append({
-                **memory.dict(),
+                **memory.model_dump(),
                 "relevance": similarity,
                 "recency": recency_score,
                 "importance_score": importance_score,
@@ -638,24 +633,21 @@ class MemoryManager:
         # Construire les objets RetrievedMemory à partir des résultats
         return [RetrievedMemory(**result) for result in top_results]
 
-    def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
+    def _cosine_similarity(self, a: np.ndarray, b: np.ndarray) -> float:
         """Calcule la similarité cosinus entre deux vecteurs"""
-        if not a or not b:
+        if a is None or b is None:
             return 0.0
 
-        a_array = np.array(a)
-        b_array = np.array(b)
-
-        dot_product = np.dot(a_array, b_array)
-        norm_a = np.linalg.norm(a_array)
-        norm_b = np.linalg.norm(b_array)
+        dot_product = np.dot(a, b)
+        norm_a = np.linalg.norm(a)
+        norm_b = np.linalg.norm(b)
 
         if norm_a == 0 or norm_b == 0:
             return 0.0
 
         return dot_product / (norm_a * norm_b)
 
-    def get_facts(self, character_id: int, subject: Optional[str] = None) -> List[Fact]:
+    def get_facts(self, character_id: int, subject: Optional[str] = None) -> list[Fact]:
         """Récupère les faits associés à un personnage"""
         if subject:
             query = "SELECT * FROM facts WHERE character_id = ? AND subject = ? ORDER BY created_at DESC"
@@ -795,7 +787,7 @@ class MemoryManager:
                 # Calculer la similarité sémantique
                 if memory1.embedding and memory2.embedding:
                     similarity = self._cosine_similarity(
-                        memory1.embedding, memory2.embedding)
+                        np.array(memory1.embedding), np.array(memory2.embedding))
 
                     # Si les mémoires sont très similaires
                     if similarity > similarity_threshold:
@@ -814,7 +806,7 @@ class MemoryManager:
                         update_data = {
                             "importance": new_importance,
                             "metadata": {
-                                **keep_memory.metadata,
+                                **(keep_memory.metadata or {}),
                                 "consolidated_with": discard_memory.id,
                                 "consolidation_date": datetime.datetime.now().isoformat(),
                                 "similarity_score": similarity
@@ -839,7 +831,7 @@ class MemoryManager:
 
         return consolidated_count
 
-    def maintenance_cycle(self, character_id: int) -> Dict[str, int]:
+    def maintenance_cycle(self, character_id: int) -> dict[str, int]:
         """Exécute un cycle complet de maintenance sur les mémoires d'un personnage
 
         Combine la dégradation des mémoires anciennes et la consolidation des mémoires similaires.

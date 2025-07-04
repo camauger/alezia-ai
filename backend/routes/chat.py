@@ -22,7 +22,7 @@ async def create_chat_session(session_data: SessionCreate):
         session = chat_service.create_session(
             user_id=session_data.user_id,
             character_id=session_data.character_id,
-            context=session_data.context.dict() if session_data.context else None
+            context=session_data.context.model_dump() if session_data.context else None
         )
         return session
     except Exception as e:
@@ -68,7 +68,7 @@ async def send_message(message_data: MessageCreate):
         response = chat_service.send_message(
             session_id=message_data.session_id,
             user_input=message_data.content,
-            metadata=message_data.metadata.dict() if message_data.metadata else None
+            metadata=message_data.metadata.model_dump() if message_data.metadata else None
         )
         return response
     except ValueError as e:

@@ -89,6 +89,9 @@ class CharacterTrait(BaseModel):
         # Ensures volatility remains between 0.0 and 1.0
         return max(0.0, min(1.0, v))
 
+    class Config:
+        from_attributes = True
+
 
 class PersonalityTraits(BaseModel):
     """Collection of personality traits"""
@@ -216,3 +219,6 @@ class TraitChange(BaseModel):
         new = values.get('new_value', 0)
         values['change_amount'] = new - old
         return values
+
+    class Config:
+        from_attributes = True

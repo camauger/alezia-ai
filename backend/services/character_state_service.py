@@ -1,6 +1,7 @@
 """
 Service for determining a character's current state (mood, etc.).
 """
+
 import datetime
 import logging
 from typing import Any
@@ -16,6 +17,7 @@ from .personality_service import personality_service
 
 logger = logging.getLogger(__name__)
 
+
 class CharacterStateService:
     """Service for determining character state"""
 
@@ -26,42 +28,53 @@ class CharacterStateService:
             raise ValueError(f"Character not found (ID: {character_id})")
 
         # Retrieve the relationship with the user
-        relationship = db.query(RelationshipModel).filter(
-            RelationshipModel.character_id == character_id,
-            RelationshipModel.target_name == 'user'
-        ).first()
+        relationship = (
+            db.query(RelationshipModel)
+            .filter(
+                RelationshipModel.character_id == character_id,
+                RelationshipModel.target_name == "user",
+            )
+            .first()
+        )
 
         relationship_data = {
             "sentiment": relationship.sentiment if relationship else 0.0,
             "trust": relationship.trust if relationship else 0.0,
-            "familiarity": relationship.familiarity if relationship else 0.0
+            "familiarity": relationship.familiarity if relationship else 0.0,
         }
 
         # Retrieve recent memories
         recent_memories = memory_manager.get_memories(character_id, limit=10)
-        recent_memories_dict = [memory.dict() for memory in recent_memories]
+        recent_memories_dict = [memory.model_dump() for memory in recent_memories]
 
         # Retrieve active traits
-        active_traits = personality_service.get_personality_traits_as_dict(db, character_id)
+        active_traits = personality_service.get_personality_traits_as_dict(
+            db, character_id
+        )
 
         # Determine mood based on memories, relationships, and personality traits
         mood = self._determine_mood(
-            relationship_data, recent_memories_dict, active_traits)
+            relationship_data, recent_memories_dict, active_traits
+        )
 
         return CharacterState(
             character_id=character_id,
             mood=mood,
             current_context={
                 "universe": character.universe.name if character.universe else None,
-                "last_interaction": datetime.datetime.now().isoformat()
+                "last_interaction": datetime.datetime.now().isoformat(),
             },
             recent_memories=recent_memories_dict,
             relationship_to_user=relationship_data,
-            active_traits=active_traits
+            active_traits=active_traits,
         )
 
-    def _determine_mood(self, relationship: dict[str, Any], recent_memories: list[dict[str, Any]],
-                        traits: dict[str, float] = None) -> str:
+    def _determine_mood(
+        self,
+        relationship: dict[str, Any],
+        recent_memories: list[dict[str, Any]],
+        traits: dict[str, float] | None = None,
+    ) -> str:
         """Determines the character's mood based on their relationship, recent memories, and personality traits"""
         # ... (same as before)
         sentiment = relationship.get("sentiment", 0.0)
@@ -91,5 +104,6 @@ class CharacterStateService:
             return "annoyed"
         else:
             return "angry"
+
 
 character_state_service = CharacterStateService()

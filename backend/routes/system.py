@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from backend.services.llm_service import llm_service
-from backend.utils.db import db_manager
+from backend.utils.db import db_manager  # type: ignore
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -35,8 +35,8 @@ async def check_database():
 async def check_llm():
     """Checks the LLM service status"""
     try:
-        status = await llm_service.check_status()
-        return status
+        status = llm_service.check_model_availability()
+        return {"status": "ok" if status else "error"}
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"LLM service error: {str(e)}")

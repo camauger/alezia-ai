@@ -12,8 +12,8 @@ class MemoryBase(BaseModel):
     """Base model for memories"""
     character_id: int = Field(...,
                               description="ID of the character associated with this memory")
-    type: str = Field(...,
-                      description="Type of memory (conversation, event, fact, thought)")
+    memory_type: str = Field(...,
+                             description="Type of memory (conversation, event, fact, thought)")
     content: str = Field(..., description="Content of the memory")
     importance: float = Field(
         1.0, description="Importance of the memory (1.0-10.0)")
@@ -23,13 +23,8 @@ class MemoryBase(BaseModel):
 
 class MemoryCreate(MemoryBase):
     """Model for creating a memory"""
-    character_id: int
-    content: str
-    memory_type: str = "conversation"  # conversation, event, observation
-    importance: float = 1.0
     source: str = "user"
     timestamp: Optional[datetime] = None
-    metadata: Optional[dict[str, Any]] = None
 
     @validator("importance")
     def check_importance(cls, v):
@@ -39,7 +34,7 @@ class MemoryCreate(MemoryBase):
 
     @validator("memory_type")
     def check_memory_type(cls, v):
-        allowed_types = ["conversation", "event", "observation", "reflection"]
+        allowed_types = ["conversation", "event", "observation", "reflection", "user_message", "character_message", "facts_extraction"]
         if v not in allowed_types:
             raise ValueError(
                 f"Memory type must be one of the following: {', '.join(allowed_types)}")

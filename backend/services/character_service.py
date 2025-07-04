@@ -15,7 +15,7 @@ class CharacterService:
 
     def create_character(self, db: Session, character: CharacterCreate) -> CharacterModel:
         """Creates a new character"""
-        db_character = CharacterModel(**character.dict(exclude={"initial_traits"}))
+        db_character = CharacterModel(**character.model_dump(exclude={"initial_traits"}))
         db.add(db_character)
         db.commit()
         db.refresh(db_character)
@@ -26,10 +26,10 @@ class CharacterService:
         """Retrieves a character by their ID"""
         return db.query(CharacterModel).options(joinedload(CharacterModel.universe)).filter(CharacterModel.id == character_id).first()
 
-    def get_characters(self, db: Session, limit: int = None) -> list[CharacterModel]:
+    def get_characters(self, db: Session, limit: Optional[int] = None) -> list[CharacterModel]:
         """Retrieves all characters"""
         query = db.query(CharacterModel).options(joinedload(CharacterModel.universe)).order_by(CharacterModel.name)
-        if limit:
+        if limit is not None:
             query = query.limit(limit)
         return query.all()
 
