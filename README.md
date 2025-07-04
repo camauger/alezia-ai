@@ -1,6 +1,35 @@
 # Alezia AI - Système de JDR avec IA non censurée
 
+![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-Latest-green.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Ollama](https://img.shields.io/badge/Ollama-Compatible-orange.svg)
+
 Un système de jeu de rôle avec des personnages IA personnalisés et non censurés, capables d'évoluer, d'apprendre et d'interagir de façon cohérente dans divers univers.
+
+## 🚀 Démarrage rapide
+
+**Nouveau ici ?** Consultez le [**Guide de démarrage rapide (START.md)**](START.md) pour être opérationnel en quelques minutes !
+
+Cette documentation complète contient tous les détails techniques et d'utilisation avancée.
+
+## Table des matières
+
+- [🚀 Démarrage rapide](#-démarrage-rapide)
+- [Fonctionnalités](#fonctionnalités)
+- [Architecture technique](#architecture-technique)
+- [Configuration requise](#configuration-requise)
+- [Installation](#installation)
+- [Structure du projet](#structure-du-projet)
+- [API REST](#api-rest)
+- [Utilisation](#utilisation)
+- [Modèle de données](#modèle-de-données)
+  - [Évolution des personnages](#évolution-des-personnages)
+- [Dépannage](#dépannage)
+- [Développement](#développement)
+- [Performances et optimisation](#performances-et-optimisation)
+- [Contributing](#contributing)
+- [Support et Contact](#support-et-contact)
 
 ## Fonctionnalités
 
@@ -38,9 +67,13 @@ Le projet est organisé en plusieurs composants clés :
 
 ## Installation
 
+> **💡 Pour un démarrage rapide**, consultez plutôt [START.md](START.md) qui contient une version simplifiée de ces instructions.
+
 ### 1. Prérequis
 
-Installez [Ollama](https://ollama.com/download) pour votre système d'exploitation et assurez-vous qu'il est en cours d'exécution.
+1. **Installez Python 3.8+** depuis [python.org](https://www.python.org/downloads/)
+2. **Installez Ollama** depuis [ollama.com/download](https://ollama.com/download)
+3. **Démarrez Ollama** et assurez-vous qu'il fonctionne avec `ollama --version`
 
 ### 2. Configuration du projet
 
@@ -231,6 +264,15 @@ Si l'API utilise un port différent de 8000, modifiez d'abord les scripts de tes
 - `trust` - Niveau de confiance (0.0 à 1.0)
 - `familiarity` - Niveau de familiarité (0.0 à 1.0)
 
+### Évolution des personnages
+
+Le système d'Alezia AI comprend des mécanismes d'évolution dynamique des personnalités :
+
+- **Évolution des traits** : Les traits de personnalité s'adaptent en fonction des interactions
+- **Évolution des relations** : Les relations avec l'utilisateur évoluent au fil du temps
+- **Moments décisifs** : Certaines conversations peuvent provoquer des changements significatifs
+- **Mémoire contextuelle** : Les personnages se souviennent des interactions passées et s'y adaptent
+
 ## Dépannage
 
 ### Problèmes de modèle AI
@@ -254,6 +296,25 @@ Si vous voyez des erreurs comme "Errno 10048" ou "WinError 10013", cela signifie
 - **API ne démarre pas**: Vérifiez que toutes les dépendances sont installées avec `pip install -r requirements.txt`
 - **Extension JSON1**: Le message "Impossible de charger l'extension JSON1" est normal sur Windows et n'affecte pas les fonctionnalités essentielles
 - **Modèle d'embeddings**: Le message "Torch not compiled with CUDA enabled" est normal si vous n'avez pas de GPU compatible CUDA
+- **Réponses lentes**: Si les réponses des personnages sont lentes, considérez utiliser un modèle plus léger comme `gemma:2b`
+- **Mémoire insuffisante**: Fermez d'autres applications gourmandes en RAM ou utilisez un modèle plus petit
+- **Base de données corrompue**: Supprimez le fichier `data/alezia.db` et relancez `python init_db.py`
+
+### Commandes de diagnostic
+
+```bash
+# Vérifier l'état de l'API
+python backend/check_api.py
+
+# Vérifier la connexion à Ollama
+ollama list
+
+# Tester la base de données
+python backend/test_db_connection.py
+
+# Voir les logs d'erreur
+# Consultez le dossier logs/ pour les fichiers de journalisation
+```
 
 ## Développement
 
@@ -289,11 +350,73 @@ Une documentation OpenAPI est générée automatiquement et accessible à l'URL:
 http://localhost:8000/docs
 ```
 
+## Performances et optimisation
+
+### Conseils pour de meilleures performances
+
+- **GPU recommandé** : Ollama fonctionne mieux avec une carte graphique compatible
+- **Modèles légers** : Utilisez `gemma:2b` ou `phi:2.7b` pour des réponses plus rapides
+- **RAM suffisante** : 16 Go recommandés pour les gros modèles comme `llama3`
+- **SSD recommandé** : Améliore les temps de chargement des embeddings
+
+### Optimisation des modèles
+
+```bash
+# Voir les modèles installés et leur taille
+ollama list
+
+# Supprimer un modèle inutilisé pour libérer l'espace
+ollama rm nom_du_modele
+
+# Précharger un modèle en mémoire (optionnel)
+ollama run gemma:2b ""
+```
+
+## Contributing
+
+Les contributions sont les bienvenues ! Pour contribuer :
+
+1. **Fork** le projet
+2. **Créez une branche** pour votre fonctionnalité (`git checkout -b feature/nouvelle-fonctionnalite`)
+3. **Committez** vos changements (`git commit -am 'Ajout nouvelle fonctionnalité'`)
+4. **Push** vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
+5. **Ouvrez une Pull Request**
+
+### Areas d'amélioration prioritaires
+
+- Nouveaux types d'univers et personnages
+- Amélioration de l'interface utilisateur
+- Optimisations de performance
+- Tests automatisés supplémentaires
+- Documentation et tutoriels
+
 ## License
 
 Ce projet est sous licence MIT - voir le fichier LICENSE pour plus de détails.
 
-## Contact
+## Support et Contact
 
-Pour toute question ou suggestion, veuillez ouvrir une issue sur GitHub.
+### 🐛 Signaler un bug
+Ouvrez une [issue GitHub](https://github.com/votre-repo/alezia-ai/issues) avec :
+- Description du problème
+- Étapes pour reproduire
+- Messages d'erreur (le cas échéant)
+- Votre configuration (OS, Python, modèle Ollama)
+
+### 💡 Suggestions d'amélioration
+Les suggestions sont bienvenues via les [GitHub Issues](https://github.com/votre-repo/alezia-ai/issues) ou [Discussions](https://github.com/votre-repo/alezia-ai/discussions).
+
+### 📚 Documentation
+- **Démarrage rapide** : [START.md](START.md)
+- **API complète** : http://localhost:8000/docs (quand l'app est lancée)
+- **Code source** : Explorez le code dans `backend/` et `frontend/`
+
+### 🤝 Communauté
+- Partagez vos personnages créés
+- Proposez de nouveaux univers
+- Contribuez au code source
+
+---
+
+**Alezia AI** - Créé avec ❤️ pour la communauté du jeu de rôle et de l'IA.
 
