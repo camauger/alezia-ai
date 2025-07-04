@@ -51,8 +51,8 @@ class ChatService:
                 db.close()
 
             if not character:
-                logger.error(f"Character {character_id} not found")
-                raise ValueError(f"Character {character_id} not found")
+                logger.error(f'Character {character_id} not found')
+                raise ValueError(f'Character {character_id} not found')
 
             # Generate a unique session ID
             session_id = str(uuid.uuid4())
@@ -64,29 +64,29 @@ class ChatService:
             # Create the session object
             timestamp = datetime.now().isoformat()
             session = {
-                "id": session_id,
-                "user_id": user_id,
-                "character_id": character_id,
-                "created_at": timestamp,
-                "updated_at": timestamp,
-                "context": context,
-                "active": True,
-                "messages": [],
+                'id': session_id,
+                'user_id': user_id,
+                'character_id': character_id,
+                'created_at': timestamp,
+                'updated_at': timestamp,
+                'context': context,
+                'active': True,
+                'messages': [],
             }
 
             # Store in the database
             session_data = {
-                "id": session_id,
-                "user_id": user_id,
-                "character_id": character_id,
-                "created_at": timestamp,
-                "updated_at": timestamp,
-                "context": json.dumps(context),
-                "active": 1,
+                'id': session_id,
+                'user_id': user_id,
+                'character_id': character_id,
+                'created_at': timestamp,
+                'updated_at': timestamp,
+                'context': json.dumps(context),
+                'active': 1,
             }
 
             # Insert using the DB manager
-            db_manager.insert("chat_sessions", session_data)
+            db_manager.insert('chat_sessions', session_data)
 
             # Cache it
             self.sessions[session_id] = session
@@ -94,7 +94,7 @@ class ChatService:
             return session
 
         except Exception as e:
-            logger.error(f"Error creating session: {e}")
+            logger.error(f'Error creating session: {e}')
             raise
 
     def get_session(self, session_id: str) -> dict[str, Any]:
@@ -112,14 +112,14 @@ class ChatService:
             return self.sessions[session_id]
 
         # Otherwise, retrieve from the database
-        session = db_manager.get_by_id("chat_sessions", session_id)
+        session = db_manager.get_by_id('chat_sessions', session_id)
 
         if not session:
-            raise ValueError(f"Session {session_id} not found")
+            raise ValueError(f'Session {session_id} not found')
 
         # Convert JSON context to a dictionary
-        if session.get("context"):
-            session["context"] = json.loads(session["context"])
+        if session.get('context'):
+            session['context'] = json.loads(session['context'])
 
         # Cache it
         self.sessions[session_id] = session
@@ -137,12 +137,12 @@ class ChatService:
         Returns:
             List of sessions
         """
-        query = "SELECT * FROM chat_sessions WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?"
+        query = 'SELECT * FROM chat_sessions WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?'
         sessions = db_manager.execute_query(query, (user_id, limit))
 
         for session in sessions:
-            if session.get("context"):
-                session["context"] = json.loads(session["context"])
+            if session.get('context'):
+                session['context'] = json.loads(session['context'])
 
         return sessions
 
@@ -158,10 +158,10 @@ class ChatService:
         """
         try:
             # Delete associated messages
-            db_manager.delete("chat_messages", "session_id = ?", (session_id,))
+            db_manager.delete('chat_messages', 'session_id = ?', (session_id,))
 
             # Delete the session
-            rows_deleted = db_manager.delete("chat_sessions", "id = ?", (session_id,))
+            rows_deleted = db_manager.delete('chat_sessions', 'id = ?', (session_id,))
 
             # Remove from cache if present
             if session_id in self.sessions:
@@ -169,7 +169,7 @@ class ChatService:
 
             return rows_deleted > 0
         except Exception as e:
-            logger.error(f"Error deleting session: {e}")
+            logger.error(f'Error deleting session: {e}')
             return False
 
     def get_session_messages(
@@ -195,8 +195,8 @@ class ChatService:
         messages = db_manager.execute_query(query, (session_id, limit, offset))
 
         for message in messages:
-            if message.get("metadata"):
-                message["metadata"] = json.loads(message["metadata"])
+            if message.get('metadata'):
+                message['metadata'] = json.loads(message['metadata'])
 
         return messages
 
@@ -214,11 +214,11 @@ class ChatService:
             Formatted prompt for the LLM
         """
         # Retrieve conversation context
-        context = session.get("context", {})
-        character_profile = context.get("character_profile", "")
+        context = session.get('context', {})
+        character_profile = context.get('character_profile', '')
 
         # Retrieve recent messages (limited to 10 to avoid overly long contexts)
-        recent_messages = self.get_session_messages(session["id"], limit=10)
+        recent_messages = self.get_session_messages(session['id'], limit=10)
 
         # Build the prompt
         prompt = f"""# CHARACTER PROFILE:
@@ -229,12 +229,12 @@ class ChatService:
 
         # Add recent messages
         for msg in recent_messages:
-            sender = "User" if msg["sender"] == "user" else "Assistant"
-            prompt += f"{sender}: {msg['content']}\n"
+            sender = 'User' if msg['sender'] == 'user' else 'Assistant'
+            prompt += f'{sender}: {msg["content"]}\n'
 
         # Add the new user message
-        prompt += f"User: {user_input}\n"
-        prompt += "Assistant: "
+        prompt += f'User: {user_input}\n'
+        prompt += 'Assistant: '
 
         return prompt
 
@@ -258,7 +258,7 @@ class ChatService:
         try:
             # Retrieve the session
             session = self.get_session(session_id)
-            character_id = session["character_id"]
+            character_id = session['character_id']
 
             # Save the user's message
             timestamp = datetime.now().isoformat()
@@ -273,7 +273,7 @@ class ChatService:
                 (
                     user_message_id,
                     session_id,
-                    "user",
+                    'user',
                     user_input,
                     character_id,
                     timestamp,
@@ -282,7 +282,7 @@ class ChatService:
             )
 
             # Update the session timestamp
-            query = "UPDATE chat_sessions SET updated_at = ? WHERE id = ?"
+            query = 'UPDATE chat_sessions SET updated_at = ? WHERE id = ?'
             db_manager.execute(query, (timestamp, session_id))
 
             # Find relevant memories
@@ -291,9 +291,9 @@ class ChatService:
             )
 
             # Update the session context with relevant memories
-            if "context" not in session:
-                session["context"] = {}
-            session["context"]["relevant_memories"] = [
+            if 'context' not in session:
+                session['context'] = {}
+            session['context']['relevant_memories'] = [
                 mem.dict() for mem in relevant_memories
             ]
 
@@ -301,8 +301,8 @@ class ChatService:
             prompt = self._build_conversation_prompt(session, user_input)
 
             # Retrieve the system prompt
-            system_prompt = session.get("context", {}).get(
-                "system_instructions", "You are a conversational AI assistant."
+            system_prompt = session.get('context', {}).get(
+                'system_instructions', 'You are a conversational AI assistant.'
             )
 
             # Generate the response with the LLM
@@ -312,7 +312,7 @@ class ChatService:
                     prompt=prompt, system_prompt=system_prompt
                 )
             except Exception as e:
-                logger.error(f"Error generating response: {e}")
+                logger.error(f'Error generating response: {e}')
                 response_text = self._generate_mock_response(prompt, [], {})
 
             generation_time = time.time() - start_time
@@ -320,8 +320,8 @@ class ChatService:
             # Save the generated response
             assistant_message_id = str(uuid.uuid4())
             assistant_metadata = {
-                "generation_time": generation_time,
-                "model": "llama3",  # To be replaced with the actual model from the LLM service
+                'generation_time': generation_time,
+                'model': 'llama3',  # To be replaced with the actual model from the LLM service
             }
 
             query = """
@@ -333,7 +333,7 @@ class ChatService:
                 (
                     assistant_message_id,
                     session_id,
-                    "assistant",
+                    'assistant',
                     response_text,
                     character_id,
                     datetime.now().isoformat(),
@@ -346,29 +346,29 @@ class ChatService:
             # Create a memory from the conversation
             from backend.models.memory import MemoryCreate
 
-            memory_content = f"User: {user_input}\n{response_text}"
+            memory_content = f'User: {user_input}\n{response_text}'
             self.memory_manager.create_memory(
                 MemoryCreate(
                     character_id=character_id,
                     content=memory_content,
-                    memory_type="conversation",
+                    memory_type='conversation',
                     importance=1.0,
                 )
             )
 
             # Return the generated message
             return {
-                "id": assistant_message_id,
-                "session_id": session_id,
-                "character_id": character_id,
-                "content": response_text,
-                "sender": "assistant",
-                "timestamp": datetime.now().isoformat(),
-                "metadata": assistant_metadata,
+                'id': assistant_message_id,
+                'session_id': session_id,
+                'character_id': character_id,
+                'content': response_text,
+                'sender': 'assistant',
+                'timestamp': datetime.now().isoformat(),
+                'metadata': assistant_metadata,
             }
 
         except Exception as e:
-            logger.error(f"Error sending message: {e}")
+            logger.error(f'Error sending message: {e}')
             raise
 
     def _generate_mock_response(
@@ -414,12 +414,12 @@ class ChatService:
             message_id = str(uuid.uuid4())
 
             message = {
-                "id": message_id,
-                "session_id": session_id,
-                "content": content,
-                "role": role,
-                "timestamp": timestamp,
-                "metadata": json.dumps(metadata) if metadata else None,
+                'id': message_id,
+                'session_id': session_id,
+                'content': content,
+                'role': role,
+                'timestamp': timestamp,
+                'metadata': json.dumps(metadata) if metadata else None,
             }
 
             # Insert into the database
@@ -435,23 +435,23 @@ class ChatService:
                     content,
                     role,
                     timestamp,
-                    message["metadata"],
+                    message['metadata'],
                     None,  # memory_id
                 ),
             )
 
             # Update the session timestamp
-            query = "UPDATE chat_sessions SET updated_at = ? WHERE id = ?"
+            query = 'UPDATE chat_sessions SET updated_at = ? WHERE id = ?'
             db_manager.execute(query, (timestamp, session_id))
 
-            character_id = session.get("character_id")
+            character_id = session.get('character_id')
             if not character_id:
-                logger.warning(f"Session {session_id} has no character_id")
+                logger.warning(f'Session {session_id} has no character_id')
                 db_manager.commit()
                 return message
 
             # Update personality traits based on message content
-            if role == "user":
+            if role == 'user':
                 # User messages have a stronger impact on the character's traits
                 try:
                     # First, create a memory
@@ -461,17 +461,17 @@ class ChatService:
                         MemoryCreate(
                             character_id=character_id,
                             content=content,
-                            memory_type="conversation",
+                            memory_type='conversation',
                             importance=1.0,
-                            source=f"chat:{session_id}",
+                            source=f'chat:{session_id}',
                         )
                     )
 
                     # Update the message with the memory ID
                     if memory_id:
-                        query = "UPDATE chat_messages SET memory_id = ? WHERE id = ?"
+                        query = 'UPDATE chat_messages SET memory_id = ? WHERE id = ?'
                         db_manager.execute(query, (memory_id, message_id))
-                        message["memory_id"] = memory_id
+                        message['memory_id'] = memory_id
 
                     # Update personality traits based on the content
                     from backend.database import SessionLocal
@@ -487,9 +487,9 @@ class ChatService:
                     finally:
                         db.close()
                 except Exception as e:
-                    logger.error(f"Error processing user message: {e}")
+                    logger.error(f'Error processing user message: {e}')
 
-            elif role == "assistant":
+            elif role == 'assistant':
                 # The character's responses also reflect their traits
                 try:
                     # Update personality traits based on the response
@@ -507,18 +507,18 @@ class ChatService:
                     finally:
                         db.close()
                 except Exception as e:
-                    logger.error(f"Error processing character response: {e}")
+                    logger.error(f'Error processing character response: {e}')
 
             db_manager.commit()
 
             # Convert JSON metadata to a dictionary
-            if message.get("metadata"):
-                message["metadata"] = json.loads(message["metadata"])
+            if message.get('metadata'):
+                message['metadata'] = json.loads(message['metadata'])
 
             return message
 
         except Exception as e:
-            logger.error(f"Error adding message: {e}")
+            logger.error(f'Error adding message: {e}')
             raise
 
     def generate_response(self, session_id: str, user_message: str) -> dict[str, Any]:
@@ -534,7 +534,7 @@ class ChatService:
         """
         try:
             # Add the user's message
-            self.add_message(session_id, user_message, "user")
+            self.add_message(session_id, user_message, 'user')
 
             # Retrieve the session
             session = self.get_session(session_id)
@@ -543,8 +543,8 @@ class ChatService:
             messages = self.get_session_messages(session_id)
 
             # Generate a response
-            context = session.get("context", {})
-            character_id = session.get("character_id")
+            context = session.get('context', {})
+            character_id = session.get('character_id')
 
             # Get the full character context
             if character_id:
@@ -555,7 +555,7 @@ class ChatService:
             message_id = str(uuid.uuid4())
 
             # If in simulation mode, generate a mock response
-            if context.get("simulation_mode"):
+            if context.get('simulation_mode'):
                 response_content = self._generate_mock_response(
                     user_message, messages, context
                 )
@@ -567,12 +567,12 @@ class ChatService:
 
             # Create the response message
             response = {
-                "id": message_id,
-                "session_id": session_id,
-                "content": response_content,
-                "role": "assistant",
-                "timestamp": timestamp,
-                "metadata": None,
+                'id': message_id,
+                'session_id': session_id,
+                'content': response_content,
+                'role': 'assistant',
+                'timestamp': timestamp,
+                'metadata': None,
             }
 
             # Insert into the database
@@ -586,7 +586,7 @@ class ChatService:
                     message_id,
                     session_id,
                     response_content,
-                    "assistant",
+                    'assistant',
                     timestamp,
                     None,  # metadata
                     None,  # memory_id
@@ -594,7 +594,7 @@ class ChatService:
             )
 
             # Update the session timestamp
-            query = "UPDATE chat_sessions SET updated_at = ? WHERE id = ?"
+            query = 'UPDATE chat_sessions SET updated_at = ? WHERE id = ?'
             db_manager.execute(query, (timestamp, session_id))
 
             db_manager.commit()
@@ -602,7 +602,7 @@ class ChatService:
             return response
 
         except Exception as e:
-            logger.error(f"Error generating response: {e}")
+            logger.error(f'Error generating response: {e}')
             raise
 
 

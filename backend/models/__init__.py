@@ -20,8 +20,23 @@ from .universe import (
 )
 
 __all__ = [
-    'Character', 'CharacterCreate', 'CharacterSummary', 'CharacterState',
-    'Memory', 'MemoryCreate', 'RetrievedMemory', 'Fact', 'FactCreate',
-    'Universe', 'UniverseCreate', 'UniverseElement', 'UniverseElementCreate', 'UniverseSummary', 'UniverseDetail',
-    'Relationship', 'RelationshipCreate', 'RelationshipUpdate', 'UserCharacterRelationship'
+    'Character',
+    'CharacterCreate',
+    'CharacterSummary',
+    'CharacterState',
+    'Memory',
+    'MemoryCreate',
+    'RetrievedMemory',
+    'Fact',
+    'FactCreate',
+    'Universe',
+    'UniverseCreate',
+    'UniverseElement',
+    'UniverseElementCreate',
+    'UniverseSummary',
+    'UniverseDetail',
+    'Relationship',
+    'RelationshipCreate',
+    'RelationshipUpdate',
+    'UserCharacterRelationship',
 ]

@@ -18,7 +18,7 @@ from backend.models.character import (
 
 from .character_service import character_service
 from .character_state_service import character_state_service
-from .personality_service import PersonalityService, personality_service
+from .personality_service import personality_service
 from .relationship_service import relationship_service
 
 logger = logging.getLogger(__name__)
@@ -57,9 +57,7 @@ class CharacterManager:
     ) -> list[CharacterSummary]:
         """Retrieves all characters"""
         characters = character_service.get_characters(db, limit)
-        return [
-            CharacterSummary.from_orm(char) for char in characters
-        ]
+        return [CharacterSummary.from_orm(char) for char in characters]
 
     def update_character(
         self, db: Session, character_id: int, updates: dict[str, Any]

@@ -1,1 +1,2 @@
-SQLAlchemy
+SQLAlchemy\"python-decouple\" 
+\"ruff\" 

@@ -22,11 +22,11 @@ class RelationshipService:
         """Initializes a relationship between the character and the user"""
         relationship = RelationshipCreate(
             character_id=character_id,
-            target_name="user",
+            target_name='user',
             sentiment=0.0,
             trust=0.3,
             familiarity=0.1,
-            notes="Initial relationship with the user",
+            notes='Initial relationship with the user',
         )
         db_relationship = RelationshipModel(**relationship.model_dump())
         db.add(db_relationship)

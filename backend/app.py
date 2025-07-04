@@ -34,21 +34,21 @@ configure_http_logging()
 
 # Initialisation de l'application FastAPI
 app = FastAPI(
-    title="Alezia AI - Système de JDR avec IA non censurée",
-    description="API pour interagir avec des personnages IA dans divers univers",
-    version="0.1.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    title='Alezia AI - Système de JDR avec IA non censurée',
+    description='API pour interagir avec des personnages IA dans divers univers',
+    version='0.1.0',
+    docs_url='/docs',
+    redoc_url='/redoc',
+    openapi_url='/openapi.json',
 )
 
 # Configuration CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=SECURITY_CONFIG["cors_origins"],
+    allow_origins=SECURITY_CONFIG['cors_origins'],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
 # Configuration des gestionnaires d'exceptions
@@ -63,33 +63,33 @@ app.include_router(memory_router)
 # Routes de base
 
 
-@app.get("/")
+@app.get('/')
 async def root():
     """Point d'entrée de l'API"""
     return {
-        "message": "Bienvenue sur l'API Alezia AI",
-        "status": "online",
-        "version": "0.1.0"
+        'message': "Bienvenue sur l'API Alezia AI",
+        'status': 'online',
+        'version': '0.1.0',
     }
 
 
-@app.get("/health")
+@app.get('/health')
 async def health_check():
     """Vérification de l'état de l'API"""
     return {
-        "status": "healthy",
-        "api": "online",
-        "database": "connected"  # À implémenter avec une vérification réelle
+        'status': 'healthy',
+        'api': 'online',
+        'database': 'connected',  # À implémenter avec une vérification réelle
     }
 
+
 # Point d'entrée pour l'exécution directe
-if __name__ == "__main__":
-    logger.info(
-        f"Démarrage de l'API sur {API_CONFIG['host']}:{API_CONFIG['port']}")
+if __name__ == '__main__':
+    logger.info(f"Démarrage de l'API sur {API_CONFIG['host']}:{API_CONFIG['port']}")
     uvicorn.run(
-        "app:app",
-        host=API_CONFIG["host"],
-        port=API_CONFIG["port"],
-        reload=API_CONFIG["debug"],
-        workers=API_CONFIG["workers"],
+        'app:app',
+        host=API_CONFIG['host'],
+        port=API_CONFIG['port'],
+        reload=API_CONFIG['debug'],
+        workers=API_CONFIG['workers'],
     )

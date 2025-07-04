@@ -13,5 +13,5 @@ __all__ = [
     'memory_manager',
     'llm_service',
     'chat_manager',
-    'universe_manager'
+    'universe_manager',
 ]

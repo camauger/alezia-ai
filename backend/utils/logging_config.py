@@ -10,7 +10,7 @@ from pathlib import Path
 
 # Niveaux de journalisation personnalisés
 TRACE = 5  # Niveau très détaillé pour le débogage approfondi
-logging.addLevelName(TRACE, "TRACE")
+logging.addLevelName(TRACE, 'TRACE')
 
 
 def trace(self, message, *args, **kwargs):
@@ -35,7 +35,7 @@ def setup_logging(log_level=logging.INFO, log_to_console=True, log_to_file=True)
     # Format de journalisation
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        datefmt='%Y-%m-%d %H:%M:%S',
     )
 
     # Journalisation dans la console
@@ -47,16 +47,16 @@ def setup_logging(log_level=logging.INFO, log_to_console=True, log_to_file=True)
 
     # Journalisation dans un fichier
     if log_to_file:
-        log_dir = Path(__file__).resolve().parent.parent.parent / "logs"
+        log_dir = Path(__file__).resolve().parent.parent.parent / 'logs'
         os.makedirs(log_dir, exist_ok=True)
 
         # Nom du fichier basé sur la date
-        today = datetime.now().strftime("%Y-%m-%d")
-        log_file = log_dir / f"alezia-{today}.log"
+        today = datetime.now().strftime('%Y-%m-%d')
+        log_file = log_dir / f'alezia-{today}.log'
 
         # Rotation des fichiers de log (10 Mo max, 10 backups)
         file_handler = logging.handlers.RotatingFileHandler(
-            log_file, maxBytes=10*1024*1024, backupCount=10, encoding='utf-8'
+            log_file, maxBytes=10 * 1024 * 1024, backupCount=10, encoding='utf-8'
         )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(log_level)
@@ -74,19 +74,19 @@ def get_logger(name):
 def configure_http_logging():
     """Configure la journalisation spécifique pour les requêtes HTTP"""
     # Réduire le niveau de journalisation pour les bibliothèques bruyantes
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-    logging.getLogger("uvicorn.error").setLevel(logging.INFO)
-    logging.getLogger("fastapi").setLevel(logging.INFO)
+    logging.getLogger('uvicorn.access').setLevel(logging.WARNING)
+    logging.getLogger('uvicorn.error').setLevel(logging.INFO)
+    logging.getLogger('fastapi').setLevel(logging.INFO)
 
     # Journalisation détaillée pour nos propres modules
-    logging.getLogger("backend").setLevel(logging.DEBUG)
+    logging.getLogger('backend').setLevel(logging.DEBUG)
 
 
 # Configuration de journalisation pour les performances
 class PerformanceLogger:
     """Utilitaire pour mesurer et journaliser les performances"""
 
-    def __init__(self, logger, prefix=""):
+    def __init__(self, logger, prefix=''):
         self.logger = logger
         self.prefix = prefix
         self.start_times = {}
@@ -94,23 +94,25 @@ class PerformanceLogger:
     def start(self, operation):
         """Démarre le chronométrage d'une opération"""
         import time
-        operation_key = f"{self.prefix}{operation}"
+
+        operation_key = f'{self.prefix}{operation}'
         self.start_times[operation_key] = time.time()
         self.logger.debug(f"Début de l'opération: {operation}")
 
     def end(self, operation, success=True):
         """Termine le chronométrage et journalise le temps écoulé"""
         import time
-        operation_key = f"{self.prefix}{operation}"
+
+        operation_key = f'{self.prefix}{operation}'
         if operation_key in self.start_times:
             elapsed = time.time() - self.start_times[operation_key]
-            status = "terminée avec succès" if success else "échouée"
-            self.logger.info(
-                f"Opération {operation} {status} en {elapsed:.3f}s")
+            status = 'terminée avec succès' if success else 'échouée'
+            self.logger.info(f'Opération {operation} {status} en {elapsed:.3f}s')
             del self.start_times[operation_key]
         else:
             self.logger.warning(
-                f"Tentative de terminer une opération non démarrée: {operation}")
+                f'Tentative de terminer une opération non démarrée: {operation}'
+            )
 
 
 # Initialisation globale du logging au démarrage du module

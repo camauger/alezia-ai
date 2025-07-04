@@ -25,26 +25,26 @@ class CharacterStateService:
         """Retrieves the current state of a character"""
         character = character_service.get_character(db, character_id)
         if not character:
-            raise ValueError(f"Character not found (ID: {character_id})")
+            raise ValueError(f'Character not found (ID: {character_id})')
 
         # Retrieve the relationship with the user
         relationship = (
             db.query(RelationshipModel)
             .filter(
                 RelationshipModel.character_id == character_id,
-                RelationshipModel.target_name == "user",
+                RelationshipModel.target_name == 'user',
             )
             .first()
         )
 
         relationship_data = {
-            "sentiment": relationship.sentiment if relationship else 0.0,
-            "trust": relationship.trust if relationship else 0.0,
-            "familiarity": relationship.familiarity if relationship else 0.0,
+            'sentiment': relationship.sentiment if relationship else 0.0,
+            'trust': relationship.trust if relationship else 0.0,
+            'familiarity': relationship.familiarity if relationship else 0.0,
         }
 
         # Retrieve recent memories
-        recent_memories = memory_manager.get_memories(character_id, limit=10)
+        recent_memories = memory_manager.get_memories(db, character_id, limit=10)
         recent_memories_dict = [memory.model_dump() for memory in recent_memories]
 
         # Retrieve active traits
@@ -61,8 +61,8 @@ class CharacterStateService:
             character_id=character_id,
             mood=mood,
             current_context={
-                "universe": character.universe.name if character.universe else None,
-                "last_interaction": datetime.datetime.now().isoformat(),
+                'universe': character.universe.name if character.universe else None,
+                'last_interaction': datetime.datetime.now().isoformat(),
             },
             recent_memories=recent_memories_dict,
             relationship_to_user=relationship_data,
@@ -77,33 +77,33 @@ class CharacterStateService:
     ) -> str:
         """Determines the character's mood based on their relationship, recent memories, and personality traits"""
         # ... (same as before)
-        sentiment = relationship.get("sentiment", 0.0)
+        sentiment = relationship.get('sentiment', 0.0)
         base_mood_score = sentiment
 
         if traits:
-            if "stabilité émotionnelle" in traits:
-                stabilité = traits["stabilité émotionnelle"]
+            if 'stabilité émotionnelle' in traits:
+                stabilité = traits['stabilité émotionnelle']
                 base_mood_score = base_mood_score * (1 - abs(stabilité) * 0.5)
-            if "extraversion" in traits:
-                extraversion = traits["extraversion"]
+            if 'extraversion' in traits:
+                extraversion = traits['extraversion']
                 base_mood_score += extraversion * 0.3
-            if "impulsivité" in traits:
-                impulsivité = traits["impulsivité"]
+            if 'impulsivité' in traits:
+                impulsivité = traits['impulsivité']
                 if base_mood_score > 0:
                     base_mood_score += impulsivité * 0.2
                 elif base_mood_score < 0:
                     base_mood_score -= impulsivité * 0.2
 
         if base_mood_score > 0.7:
-            return "cheerful"
+            return 'cheerful'
         elif base_mood_score > 0.3:
-            return "friendly"
+            return 'friendly'
         elif base_mood_score > -0.3:
-            return "neutral"
+            return 'neutral'
         elif base_mood_score > -0.7:
-            return "annoyed"
+            return 'annoyed'
         else:
-            return "angry"
+            return 'angry'
 
 
 character_state_service = CharacterStateService()
