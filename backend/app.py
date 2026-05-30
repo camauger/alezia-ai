@@ -34,6 +34,16 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 logger = setup_logging(log_to_file=True)
 configure_http_logging()
 
+from backend.services.llm_service import llm_service
+
+if llm_service.mock_mode:
+    logger.warning(
+        "⚠️  MODE MOCK ACTIF — les réponses du LLM sont factices. "
+        "Démarrez Ollama et installez un modèle pour des réponses réelles."
+    )
+else:
+    logger.info("LLM réel actif (mode mock désactivé).")
+
 # Initialisation de l'application FastAPI
 app = FastAPI(
     title="Alezia AI - Système de JDR avec IA non censurée",
