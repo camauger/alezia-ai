@@ -18,8 +18,8 @@ python init_db.py
 
 # Tests
 pytest                               # tous les tests
-pytest tests/test_character_manager.py
-pytest tests/test_character_manager.py::test_nom -v   # un seul test
+pytest tests/test_chat_service.py
+pytest tests/test_chat_service.py::test_create_session_and_send_message_roundtrip -v   # un seul test
 pytest --cov=backend                 # avec couverture
 
 # Lint & format (ruff est l'outil configuré — pas flake8/black malgré le README)
@@ -50,7 +50,7 @@ Le frontend n'a pas de build : ouvrir l'URL affichée par `run_api.py` (le serve
 ### Frontend (`frontend/`)
 HTML statique + JS vanilla dans `assets/js/` (`api.js`, `chat.js`, `main.js`, `memory-explorer.js`). Communique avec le backend via fetch.
 
-## Architecture (état aligné)
+## Points critiques (à connaître avant de modifier)
 
 - **Config unique** : `backend/config.py`, pilotée par `.env` (python-decouple). Le `config.py` racine a été supprimé.
 - **Base unique** : `data/alezia.db`, accès exclusivement via SQLAlchemy (`backend/database.py` → `SessionLocal` / `Base` / `engine` / `get_db`). `db_manager` (sqlite3 brut) et `schema.sql` ont été supprimés. Initialisation via `Base.metadata.create_all` (voir `init_db.py` et `run_api.py`).
