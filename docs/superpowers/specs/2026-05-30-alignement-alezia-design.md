@@ -42,7 +42,7 @@ Faits vérifiés (par lecture du code, pas supposés) :
 | Base de données | **SQLAlchemy, fichier unique** | Tous les modèles sont déjà en ORM ; la majorité des services prennent `db: Session`. Migrer *vers* SQLAlchemy = ne réécrire que le chat. Migrer vers sqlite3 brut = réécrire mémoire + traits + relations + univers (bien plus de travail). |
 | Accès chat | Modèles ORM `ChatSession` / `ChatMessage` | Porter les méthodes de `chat_service` qui utilisent `db_manager` vers l'ORM. Retirer `db_manager`, `schema.sql`, l'ancien fichier brut. |
 | Services morts | Supprimer `chat_manager` + `universe_manager` | Ré-exportés mais injoignables. Mettre à jour `services/__init__.py`. **Ne pas** toucher à `character_service` & co (vivants via la façade). |
-| Démarrage | `run_api.py` seul | Supprimer `start_api_*.py`, `backend_api.py`, `api_test.py`, `check_api_health.py`. Conserver un seul lanceur d'appoint (`start.ps1` ou `start.bat`). |
+| Démarrage | `run_api.py` **unique** | Supprimer `start_api_*.py`, `start.ps1`, `start.bat`, `start_api.ps1`, `start_api.bat`, `backend_api.py`, `api_test.py`, `check_api_health.py`, `Modelfile`. (Confirmé inutilisés par l'utilisateur.) |
 | Mode mock | **Bruyant** | Au démarrage, log explicite `⚠️ MODE MOCK ACTIF — réponses factices` si Ollama absent. Défaut `LLM_MOCK_MODE=False`. |
 | `requirements.txt` | Réparé | Vraies deps : `fastapi`, `uvicorn`, `sqlalchemy`, `python-decouple`, `requests`, `numpy`, `sentence-transformers`, `pytest`, `ruff`. |
 
@@ -68,7 +68,7 @@ Chaque étape se termine par une **vérification** : l'app démarre (`python run
 3. **Services morts.** Supprimer `chat_manager.py` et `universe_manager.py` ; nettoyer `services/__init__.py`. (Re-vérifier l'absence de tout import avant suppression.)
    - *Vérif :* démarrage OK, routes inchangées.
 
-4. **Parasites.** Supprimer les lanceurs/fichiers morts (`start_api_*.py`, `backend_api.py`, `api_test.py`, `check_api_health.py`, `Modelfile` si inutilisé). Réparer `requirements.txt`. Regrouper les `backend/test_*.py` dans `tests/`. Supprimer les `.db` orphelins (`alezia-TELUQ-*.db-*`, ancien `jdr_database.sqlite` après migration).
+4. **Parasites.** Supprimer les lanceurs/fichiers morts (tous les `start*.py` / `start*.ps1` / `start*.bat`, `backend_api.py`, `api_test.py`, `check_api_health.py`, `Modelfile` — confirmés inutilisés). Réparer `requirements.txt`. Regrouper les `backend/test_*.py` dans `tests/`. Supprimer les `.db` orphelins (`alezia-TELUQ-*.db-*`, ancien `jdr_database.sqlite` après migration).
    - *Vérif :* `pytest` passe ; un seul chemin de démarrage.
 
 5. **Doc.** Mettre à jour `CLAUDE.md` pour refléter le chemin unique (un seul config, une seule base SQLAlchemy, services vivants). README/GEMINI/cursor-rules laissés tels quels (sandbox — priorité basse), avec une note dans CLAUDE.md signalant qu'ils sont historiques.
