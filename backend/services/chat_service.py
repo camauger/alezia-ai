@@ -127,16 +127,20 @@ class ChatService:
             db.close()
 
     def _build_prompt(
-        self, session_dict: dict[str, Any], user_input: str
+        self, db, session_id: str, context: dict, user_input: str
     ) -> str:
-        context = session_dict.get("context", {}) or {}
-        character_profile = context.get("character_profile", "")
-
-        recent = self.get_session_messages(session_dict["id"], limit=10)
+        character_profile = (context or {}).get("character_profile", "")
+        recent = (
+            db.query(MessageModel)
+            .filter_by(session_id=session_id)
+            .order_by(MessageModel.timestamp.asc())
+            .limit(10)
+            .all()
+        )
         prompt = f"# CHARACTER PROFILE:\n{character_profile}\n\n# CONVERSATION:\n"
-        for msg in recent:
-            sender = "User" if msg["sender"] == "user" else "Assistant"
-            prompt += f"{sender}: {msg['content']}\n"
+        for m in recent:
+            sender = "User" if m.sender == "user" else "Assistant"
+            prompt += f"{sender}: {m.content}\n"
         prompt += f"User: {user_input}\nAssistant: "
         return prompt
 
@@ -176,7 +180,7 @@ class ChatService:
                 m.model_dump() for m in relevant
             ]
 
-            prompt = self._build_prompt(session_dict, user_input)
+            prompt = self._build_prompt(db, session_id, session_dict.get("context", {}), user_input)
             system_prompt = session_dict["context"].get(
                 "system_instructions", "You are a conversational AI assistant."
             )
@@ -191,19 +195,18 @@ class ChatService:
                 "generation_time": generation_time,
                 "model": llm_service.default_model,
             }
-            assistant_id = str(uuid.uuid4())
-            db.add(
-                MessageModel(
-                    id=assistant_id,
-                    session_id=session_id,
-                    sender="assistant",
-                    content=response_text,
-                    character_id=character_id,
-                    message_metadata=json.dumps(assistant_meta),
-                )
+            assistant_msg = MessageModel(
+                id=str(uuid.uuid4()),
+                session_id=session_id,
+                sender="assistant",
+                content=response_text,
+                character_id=character_id,
+                message_metadata=json.dumps(assistant_meta),
             )
+            db.add(assistant_msg)
             session.updated_at = datetime.now()
             db.commit()
+            db.refresh(assistant_msg)
 
             # Mémoire de la conversation (db passé correctement)
             try:
@@ -228,12 +231,12 @@ class ChatService:
                 logger.error(f"Erreur évolution des traits: {e}")
 
             return {
-                "id": assistant_id,
+                "id": assistant_msg.id,
                 "session_id": session_id,
                 "character_id": character_id,
                 "content": response_text,
                 "sender": "assistant",
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": assistant_msg.timestamp.isoformat() if assistant_msg.timestamp else None,
                 "metadata": assistant_meta,
             }
         finally:
