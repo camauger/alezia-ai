@@ -52,6 +52,16 @@ def client(tmp_path):
             universe_id=None,
         )
     )
+    # Données courtes (legacy) : doivent rester lisibles via le modèle de lecture
+    seed.add(
+        CharacterModel(
+            id=3,
+            name="Legacy",
+            description="test",
+            personality="test",
+            universe_id=None,
+        )
+    )
     seed.commit()
     seed.close()
 
@@ -72,8 +82,17 @@ def test_list_characters_serializes_universe_as_name(client):
     assert r.status_code == 200, r.text
     data = r.json()
     by_id = {c["id"]: c for c in data}
-    assert len(data) == 2
+    assert len(data) == 3
     # Le personnage rattaché à un univers expose le NOM de l'univers (str), pas l'objet ORM
     assert by_id[1]["universe"] == "Monde de test"
     # Le personnage sans univers expose None
     assert by_id[2]["universe"] is None
+
+
+def test_get_character_detail_allows_short_legacy_data(client):
+    # Le modèle de lecture ne doit pas rejeter une description/personnalité courte
+    r = client.get("/api/characters/3")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["id"] == 3
+    assert body["description"] == "test"

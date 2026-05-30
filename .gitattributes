@@ -1,0 +1,14 @@
+# Normalisation des fins de ligne — évite le bruit CRLF<->LF dans les diffs.
+# Tous les fichiers texte sont stockés en LF dans le dépôt.
+* text=auto eol=lf
+
+# Scripts Windows : conservés en CRLF.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Fichiers binaires : jamais touchés.
+*.db binary
+*.sqlite binary
+*.png binary
+*.jpg binary
+*.ico binary

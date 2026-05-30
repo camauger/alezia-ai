@@ -45,8 +45,26 @@ class LLMService:
                 models = response.json().get('models', [])
                 available_models = [model.get('name') for model in models]
 
+                # Correspondance exacte, sinon tolérante par préfixe
+                # (ex. 'llama3' -> 'llama3.1:latest') pour éviter une bascule
+                # mock surprise quand seul un tag versionné est installé.
+                resolved = None
                 if self.default_model in available_models:
-                    logger.info(f'Model {self.default_model} available on Ollama.')
+                    resolved = self.default_model
+                else:
+                    resolved = next(
+                        (m for m in available_models if m.startswith(self.default_model)),
+                        None,
+                    )
+
+                if resolved:
+                    if resolved != self.default_model:
+                        logger.info(
+                            f"Model '{self.default_model}' résolu vers '{resolved}'."
+                        )
+                        self.default_model = resolved
+                    else:
+                        logger.info(f'Model {self.default_model} available on Ollama.')
                     self.mock_mode = False
                     return True
                 else:

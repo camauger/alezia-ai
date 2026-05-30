@@ -185,10 +185,18 @@ def _universe_to_name(v: Any) -> Optional[str]:
 
 
 class Character(CharacterBase):
-    """Complete model of a character with its metadata"""
+    """Complete model of a character with its metadata.
+
+    Modèle de LECTURE : on n'applique PAS les contraintes de longueur de
+    ``CharacterBase`` (input), pour ne pas rejeter des données déjà en base
+    (ex. anciens personnages de test à description courte). La validation
+    stricte reste sur ``CharacterCreate``.
+    """
 
     id: int
     created_at: datetime
+    description: str  # override sans min_length (lecture tolérante)
+    personality: str  # override sans min_length (lecture tolérante)
     universe: Optional[str] = None
 
     _normalize_universe = field_validator("universe", mode="before")(
