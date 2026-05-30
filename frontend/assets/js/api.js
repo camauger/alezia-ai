@@ -5,12 +5,31 @@
 
 class AleziaAPI {
     constructor() {
-        // Charger le port API depuis le fichier de configuration
-        this.loadApiConfig();
-        this.baseUrl = `http://localhost:${this.apiPort}`;
         this.connected = false;
-        this.apiUrl = null;
+        // Le frontend est servi PAR le backend : l'API est sur la MÊME origine
+        // que la page. Inutile de deviner le port — run_api.py peut choisir
+        // n'importe quel port libre (8000-8020), la page est servie depuis
+        // celui-ci, donc window.location.origin est toujours la bonne adresse.
+        const servedOverHttp =
+            typeof window !== 'undefined' &&
+            window.location &&
+            typeof window.location.protocol === 'string' &&
+            window.location.protocol.startsWith('http');
+        this.baseUrl = servedOverHttp
+            ? window.location.origin
+            : 'http://localhost:8000'; // fallback si ouvert en file://
+        this.apiUrl = `${this.baseUrl}/api`;
         this.initPromise = this.initialize();
+    }
+
+    /**
+     * Initialise le client. L'API étant servie sur la même origine que la page,
+     * il suffit de vérifier la connexion (pas de détection de port).
+     * @returns {Promise<boolean>}
+     */
+    async initialize() {
+        await this.checkConnection();
+        return this.connected;
     }
 
     /**
