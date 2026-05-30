@@ -3,10 +3,12 @@ Routes for memory management
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from sqlalchemy.orm import Session
 
+from backend.database import get_db
 from backend.models.memory import Fact, Memory, MemoryCreate, RetrievedMemory
 from backend.services.memory_manager import memory_manager
 
@@ -16,29 +18,35 @@ logger = logging.getLogger(__name__)
 
 @router.get('/character/{character_id}/memories')
 @router.get('/character/{character_id}/memories/')
-async def get_character_memories(character_id: int, limit: int = 100) -> list[Memory]:
+async def get_character_memories(
+    character_id: int, limit: int = 100, db: Session = Depends(get_db)
+) -> list[Memory]:
     """
     Retrieves memories for a character
     """
-    memories = memory_manager.get_memories(character_id, limit)
+    memories = memory_manager.get_memories(db, character_id, limit)
     return memories
 
 
 @router.get('/character/{character_id}/facts')
 @router.get('/character/{character_id}/facts/')
 async def get_character_facts(
-    character_id: int, subject: Optional[str] = None
+    character_id: int,
+    subject: str | None = None,
+    db: Session = Depends(get_db),
 ) -> list[Fact]:
     """
     Retrieves facts extracted from a character's memories
     """
-    facts = memory_manager.get_facts(character_id, subject)
+    facts = memory_manager.get_facts(db, character_id, subject)
     return facts
 
 
 @router.post('/character/{character_id}/memories')
 @router.post('/character/{character_id}/memories/')
-async def create_memory(character_id: int, memory: MemoryCreate) -> dict[str, Any]:
+async def create_memory(
+    character_id: int, memory: MemoryCreate, db: Session = Depends(get_db)
+) -> dict[str, Any]:
     """
     Creates a new memory for a character
     """
@@ -49,8 +57,8 @@ async def create_memory(character_id: int, memory: MemoryCreate) -> dict[str, An
         )
 
     try:
-        memory_id = memory_manager.create_memory(memory)
-        return {'id': memory_id, 'success': True}
+        db_memory = memory_manager.create_memory(db, memory)
+        return {'id': db_memory.id, 'success': True}
     except Exception as e:
         logger.error(f'Error creating memory: {e}')
         raise HTTPException(status_code=500, detail=str(e))
@@ -58,11 +66,11 @@ async def create_memory(character_id: int, memory: MemoryCreate) -> dict[str, An
 
 @router.get('/memories/{memory_id}')
 @router.get('/memories/{memory_id}/')
-async def get_memory(memory_id: int) -> Memory:
+async def get_memory(memory_id: int, db: Session = Depends(get_db)) -> Memory:
     """
     Retrieves a specific memory
     """
-    memory = memory_manager.get_memory(memory_id)
+    memory = memory_manager.get_memory(db, memory_id)
     if not memory:
         raise HTTPException(status_code=404, detail='Memory not found')
     return memory
@@ -71,7 +79,9 @@ async def get_memory(memory_id: int) -> Memory:
 @router.put('/memories/{memory_id}/importance')
 @router.put('/memories/{memory_id}/importance/')
 async def update_memory_importance(
-    memory_id: int, importance: float = Body(..., embed=True)
+    memory_id: int,
+    importance: float = Body(..., embed=True),
+    db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """
     Updates the importance of a memory
@@ -80,10 +90,12 @@ async def update_memory_importance(
     importance = max(0.0, min(10.0, importance))
 
     try:
-        success = memory_manager.update_memory_importance(memory_id, importance)
+        success = memory_manager.update_memory_importance(db, memory_id, importance)
         if not success:
             raise HTTPException(status_code=404, detail='Memory not found')
         return {'success': True, 'importance': importance}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f'Error updating importance: {e}')
         raise HTTPException(status_code=500, detail=str(e))
@@ -91,11 +103,11 @@ async def update_memory_importance(
 
 @router.delete('/memories/{memory_id}')
 @router.delete('/memories/{memory_id}/')
-async def delete_memory(memory_id: int) -> dict[str, bool]:
+async def delete_memory(memory_id: int, db: Session = Depends(get_db)) -> dict[str, bool]:
     """
     Deletes a memory
     """
-    success = memory_manager.delete_memory(memory_id)
+    success = memory_manager.delete_memory(db, memory_id)
     if not success:
         raise HTTPException(status_code=404, detail='Memory not found')
     return {'success': True}
@@ -103,12 +115,14 @@ async def delete_memory(memory_id: int) -> dict[str, bool]:
 
 @router.post('/character/{character_id}/maintenance')
 @router.post('/character/{character_id}/maintenance/')
-async def run_memory_maintenance(character_id: int) -> dict[str, Any]:
+async def run_memory_maintenance(
+    character_id: int, db: Session = Depends(get_db)
+) -> dict[str, Any]:
     """
     Runs a maintenance cycle on a character's memories
     """
     try:
-        stats = memory_manager.maintenance_cycle(character_id)
+        stats = memory_manager.maintenance_cycle(db, character_id)
         return {'success': True, 'statistics': stats}
     except Exception as e:
         logger.error(f'Error during maintenance cycle: {e}')
@@ -123,13 +137,14 @@ async def get_relevant_memories(
     limit: int = 5,
     recency_weight: float = Query(0.3, ge=0.0, le=1.0),
     importance_weight: float = Query(0.4, ge=0.0, le=1.0),
+    db: Session = Depends(get_db),
 ) -> list[RetrievedMemory]:
     """
     Retrieves the most relevant memories for a query
     """
     try:
         memories = memory_manager.get_relevant_memories(
-            character_id, query, limit, recency_weight, importance_weight
+            db, character_id, query, limit, recency_weight, importance_weight
         )
         return memories
     except Exception as e:
