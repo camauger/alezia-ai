@@ -16,6 +16,7 @@ from backend.routes.characters import router as characters_router
 from backend.routes.chat import router as chat_router
 from backend.routes.memory import router as memory_router
 from backend.routes.system import router as system_router
+from backend.services.llm_service import llm_service
 from backend.utils.errors import configure_exception_handlers
 from backend.utils.logging_config import configure_http_logging, setup_logging
 
@@ -33,8 +34,6 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 # Configuration du logging
 logger = setup_logging(log_to_file=True)
 configure_http_logging()
-
-from backend.services.llm_service import llm_service
 
 if llm_service.mock_mode:
     logger.warning(
