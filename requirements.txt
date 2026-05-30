@@ -1,2 +1,9 @@
-SQLAlchemy\"python-decouple\" 
-\"ruff\" 
+fastapi
+uvicorn
+sqlalchemy
+python-decouple
+requests
+numpy
+sentence-transformers
+pytest
+ruff
