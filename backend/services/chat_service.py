@@ -209,18 +209,15 @@ class ChatService:
             db.refresh(assistant_msg)
 
             # Mémoire de la conversation (db passé correctement)
-            try:
-                self.memory_manager.create_memory(
-                    db,
-                    MemoryCreate(
-                        character_id=character_id,
-                        content=f"User: {user_input}\n{response_text}",
-                        memory_type="conversation",
-                        importance=1.0,
-                    ),
-                )
-            except Exception as e:
-                logger.error(f"Erreur création mémoire: {e}")
+            self.memory_manager.create_memory(
+                db,
+                MemoryCreate(
+                    character_id=character_id,
+                    content=f"User: {user_input}\n{response_text}",
+                    memory_type="conversation",
+                    importance=1.0,
+                ),
+            )
 
             # Évolution des traits à partir de l'échange utilisateur
             try:
