@@ -9,21 +9,12 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from backend.database import SessionLocal
+from backend.database import get_db
 from backend.models.character import CharacterCreate
 from backend.services.character_manager import character_manager
 
 router = APIRouter(prefix='/characters', tags=['Characters'])
 logger = logging.getLogger(__name__)
-
-
-# Dependency to get the database session
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 class TraitUpdateRequest(BaseModel):
