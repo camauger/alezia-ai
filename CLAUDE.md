@@ -13,7 +13,7 @@ Alezia AI — système de jeu de rôle avec personnages IA non censurés, propul
 python run_api.py
 python run_api.py --port 8001        # forcer un port
 
-# Initialiser / réinitialiser la base de données (crée l'univers par défaut)
+# Initialiser / réinitialiser la base de données (via SQLAlchemy ORM — Base.metadata.create_all)
 python init_db.py
 
 # Tests
@@ -33,43 +33,35 @@ Le frontend n'a pas de build : ouvrir l'URL affichée par `run_api.py` (le serve
 ## Prérequis runtime
 
 - **Ollama** doit tourner (`http://localhost:11434`) avec un modèle installé (`ollama pull gemma:2b` ou `llama3`). Voir `install_models.ps1`.
-- Sans Ollama, le `LLMService` bascule en **mode mock** (réponses factices) — voir gotcha ci-dessous.
+- `LLM_MOCK_MODE=False` par défaut ; si Ollama est absent au démarrage, un avertissement explicite est loggé (pas de bascule silencieuse).
 
 ## Architecture
 
 ### Flux d'une requête de chat
-`frontend (api.js)` → route FastAPI sous `/api/chat/...` → `chat_service` → `character_service` (profil + état) + `memory_manager` (mémoires pertinentes par similarité d'embedding) → construction du prompt → `llm_service.generate_text()` → Ollama → réponse persistée + extraction de faits/mémoires.
+`frontend (api.js)` → route FastAPI sous `/api/chat/...` → `chat_service` → `character_manager` (profil + état + personnalité + relations) + `memory_manager` (mémoires pertinentes par similarité d'embedding) → construction du prompt → `llm_service.generate_text()` → Ollama → réponse persistée + extraction de faits/mémoires.
 
 ### Backend (`backend/`)
-- `app.py` — instancie FastAPI, monte les fichiers statiques, inclut les routers **sous le préfixe `/api`**, expose `/health`.
+- `app.py` — instancie FastAPI, monte les fichiers statiques, inclut les routers **sous le préfixe `/api`**, expose `/health`. Appelle `Base.metadata.create_all` pour initialiser le schéma ORM.
 - `routes/` — endpoints FastAPI (characters, chat, memory, system). Fins, délèguent aux services.
-- `services/` — logique métier. Plusieurs services exposent une **instance globale singleton** (`llm_service`, `chat_service`, `db_manager`).
-- `models/` — modèles Pydantic (API/validation) **et** modèles SQLAlchemy (ex. `MemoryModel` dans `memory.py`). Réexportés via `models/__init__.py`.
-- `utils/db.py` — `DatabaseManager` (sqlite3 brut), `utils/schema.sql` — le schéma SQL.
+- `services/` — logique métier. Services actifs : `llm_service`, `chat_service`, `memory_manager`, `character_manager` (façade sur `character_service`, `character_state_service`, `personality_service`, `relationship_service`).
+- `models/` — modèles Pydantic (API/validation) **et** modèles SQLAlchemy (`MemoryModel` dans `memory.py`, `ChatSessionModel`/`MessageModel` dans `chat.py`). Réexportés via `models/__init__.py`.
+- `database.py` — `SessionLocal`, `Base`, `engine`, `get_db` (SQLAlchemy). Toutes les tables passent par cet ORM.
 
 ### Frontend (`frontend/`)
 HTML statique + JS vanilla dans `assets/js/` (`api.js`, `chat.js`, `main.js`, `memory-explorer.js`). Communique avec le backend via fetch.
 
-## Pièges critiques (à connaître avant de modifier)
+## Architecture (état aligné)
 
-1. **Deux fichiers `config.py`.** L'application utilise **`backend/config.py`** (`API_CONFIG`, `SECURITY_CONFIG`, `LLM_CONFIG`, `EMBEDDING_CONFIG`, `DB_PATH`). Le `config.py` racine (basé sur `python-decouple` / `.env`) n'est **pas** importé par le code applicatif. Ne pas confondre.
+- **Config unique** : `backend/config.py`, pilotée par `.env` (python-decouple). Le `config.py` racine a été supprimé.
+- **Base unique** : `data/alezia.db`, accès exclusivement via SQLAlchemy (`backend/database.py` → `SessionLocal` / `Base` / `engine` / `get_db`). `db_manager` (sqlite3 brut) et `schema.sql` ont été supprimés. Initialisation via `Base.metadata.create_all` (voir `init_db.py` et `run_api.py`).
+- **Mode mock LLM bruyant** : défaut `LLM_MOCK_MODE=False` ; un avertissement explicite est loggé au démarrage si Ollama est absent.
+- **Services** : routes → `character_manager` (façade sur `character_service`, `character_state_service`, `personality_service`, `relationship_service`), `chat_service`, `memory_manager`, `llm_service`. `chat_manager` et `universe_manager` ont été supprimés.
+- **Chat** : modèles ORM `ChatSessionModel` / `MessageModel` (`backend/models/chat.py`, id UUID en String). L'historique de chat antérieur (tables legacy `sessions` / `messages`) n'est pas utilisé.
+- **Préfixe `/api`** : tous les endpoints sont sous `/api` (ex. `POST /api/chat/create`, `GET /api/characters`). Le README/cursor-rules listent des chemins sans `/api` — ils sont obsolètes ; se fier au code des routes.
+- **`api_port.txt`** : au démarrage, le port choisi est écrit dans ce fichier pour que le frontend trouve le backend. Si on change la logique de port, garder ce mécanisme.
+- **Lanceur unique** : `python run_api.py`.
 
-2. **Deux paradigmes d'accès BD coexistent**, sur deux fichiers `.db` différents :
-   - `backend/utils/db.py` → `db_manager` (sqlite3 brut), pointe par défaut sur `data/alezia.db`. Utilisé par la plupart des services et `init_db.py`.
-   - `backend/database.py` → SQLAlchemy (`SessionLocal`, `Base`), pointe sur `DB_PATH = data/jdr_database.sqlite`. Utilisé par `memory_manager` (Session SQLAlchemy + `SentenceTransformer`).
-   Vérifier quel paradigme cible une table avant d'écrire une requête.
-
-3. **Mode mock par défaut.** `LLM_CONFIG` dans `backend/config.py` n'a pas les clés (`api_url`, `default_model`, `mock_mode`) que `llm_service.py` lit via `.get(...)` ; le service retombe donc sur ses défauts (`mock_mode=True`, URL `localhost:11434/api`). Conséquence : tant qu'Ollama n'est pas détecté, le chat renvoie des réponses factices. Idem pour les embeddings (vecteurs aléatoires déterministes).
-
-4. **Préfixe `/api`.** Tous les endpoints sont sous `/api` (ex. `POST /api/chat/create`, `GET /api/characters`). Le README/cursor-rules listent des chemins **sans** `/api` — ils sont obsolètes ; se fier au code des routes.
-
-5. **`api_port.txt`.** Au démarrage, le port choisi est écrit dans un fichier (`api_port.txt` / `frontend/api_port.txt`) pour que le frontend trouve le backend. Si on change la logique de port, garder ce mécanisme.
-
-6. **`requirements.txt` est malformé** (contenu sur une ligne, cassé). Les vraies dépendances : `fastapi`, `uvicorn`, `sqlalchemy`, `python-decouple`, `requests`, `numpy`, `sentence-transformers`, `pytest`, `ruff`. Installer manuellement si `pip install -r` échoue.
-
-7. **Doublons de services** : `character_manager`/`character_service`, `chat_manager`/`chat_service`. Vérifier lequel est réellement câblé via les routes (les `*_service` sont les instances importées par `routes/`).
-
-8. **Multiples scripts de démarrage** (`start_api_*.py`, `start.ps1`, `start.bat`) sont des variantes/expérimentations. **`run_api.py` est le point d'entrée de référence.**
+> Note : `README.md`, `GEMINI.md` et `.cursor/rules/` sont historiques et peuvent décrire l'ancien état (chemins sans `/api`, flake8/black, deux bases). Se fier au code et à ce fichier.
 
 ## Conventions de code
 
