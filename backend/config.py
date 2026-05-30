@@ -5,26 +5,21 @@ Optimized for i7-13700HX + RTX 4060 Laptop GPU (8 GB VRAM)
 
 import os
 from pathlib import Path
-from decouple import config, Csv
+
+from decouple import Csv, config
 
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / 'data'
-DB_PATH = DATA_DIR / 'jdr_database.sqlite'
+DB_PATH = DATA_DIR / 'alezia.db'
 
-# Ollama configuration
+# Ollama configuration (clés lues par backend/services/llm_service.py)
 LLM_CONFIG = {
-    'model_name': 'mistral',  # Default model
-    'fallback_model': 'llama2',  # Fallback model
-    'max_tokens': 500,  # Maximum number of tokens for responses
-    'temperature': 0.7,  # Temperature for generation
-    'ollama_base_url': 'http://localhost:11434',  # Base URL for Ollama
-    'gpu_settings': {
-        'gpu_layers': 35,  # Use GPU for most layers
-        'num_gpu': 1,
-        'batch_size': 512,  # Adapted to 8GB VRAM
-        'num_thread': 8,  # Optimized for i7-13700HX
-    },
+    'api_url': config('LLM_API_URL', default='http://localhost:11434/api'),
+    'default_model': config('LLM_DEFAULT_MODEL', default='llama3'),
+    'mock_mode': config('LLM_MOCK_MODE', default=False, cast=bool),
+    'temperature': config('LLM_TEMPERATURE', default=0.7, cast=float),
+    'max_tokens': config('LLM_MAX_TOKENS', default=1024, cast=int),
 }
 
 # API configuration
@@ -39,10 +34,11 @@ API_CONFIG = {
 
 # Embeddings configuration
 EMBEDDING_CONFIG = {
-    'model_name': 'all-MiniLM-L6-v2',  # Lightweight but effective model
+    'model_name': config('EMBEDDING_MODEL', default='all-MiniLM-L6-v2'),
     'cache_dir': DATA_DIR / 'embeddings',
-    'dimensions': 384,  # Dimension of the embeddings
-    'use_gpu': True,  # Use the GPU for embeddings
+    'dimensions': config('EMBEDDING_DIMENSIONS', default=384, cast=int),
+    'use_gpu': config('EMBEDDING_USE_GPU', default=False, cast=bool),
+    'mock_mode': config('EMBEDDING_MOCK_MODE', default=True, cast=bool),
 }
 
 # System limits
@@ -52,8 +48,6 @@ SYSTEM_LIMITS = {
     'max_characters': 20,
     'max_universes': 10,
 }
-
-from decouple import Csv, config
 
 # Security configuration
 SECURITY_CONFIG = {

@@ -5,28 +5,20 @@ Routes for system functions
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy import inspect
 
+from backend.database import engine
 from backend.services.llm_service import llm_service
-from backend.utils.db import db_manager  # type: ignore
 
 router = APIRouter(prefix='/system', tags=['system'])
 
 
 @router.get('/check-database', response_model=dict[str, Any])
 async def check_database():
-    """Checks the database status"""
+    """Checks the database status via SQLAlchemy."""
     try:
-        # Check that we can execute a simple query
-        results = db_manager.execute_query(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        )
-        tables = [row.get('name') for row in results]
-
-        return {
-            'status': 'ok',
-            'tables': tables,
-            'database_path': str(db_manager.db_path),
-        }
+        tables = inspect(engine).get_table_names()
+        return {'status': 'ok', 'tables': tables, 'database_path': str(engine.url)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f'Database error: {str(e)}')
 

@@ -114,18 +114,18 @@ class ChatSession(BaseModel):
 
 
 class ChatSessionModel(Base):
-    """Modèle SQLAlchemy pour les sessions de chat"""
+    """Modèle SQLAlchemy pour les sessions de chat (id UUID en String)."""
 
     __tablename__ = "chat_sessions"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(String(255), nullable=False)
+    id = Column(String, primary_key=True)  # UUID
+    user_id = Column(String, nullable=False, default="default_user")
     character_id = Column(Integer, ForeignKey("characters.id"), nullable=False)
-    start_time = Column(DateTime, default=datetime.now, nullable=False)
-    end_time = Column(DateTime, nullable=True)
-    summary = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, nullable=False)
+    active = Column(Boolean, default=True, nullable=False)
+    context = Column(Text, nullable=True)  # JSON sérialisé
 
-    # Relations
     character = relationship("CharacterModel")
     messages = relationship(
         "MessageModel", back_populates="session", cascade="all, delete-orphan"
@@ -133,20 +133,18 @@ class ChatSessionModel(Base):
 
 
 class MessageModel(Base):
-    """Modèle SQLAlchemy pour les messages de chat"""
+    """Modèle SQLAlchemy pour les messages de chat (id UUID en String)."""
 
     __tablename__ = "chat_messages"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(Integer, ForeignKey("chat_sessions.id"), nullable=False)
-    is_user = Column(Boolean, nullable=False)
+    id = Column(String, primary_key=True)  # UUID
+    session_id = Column(String, ForeignKey("chat_sessions.id"), nullable=False)
+    sender = Column(String, nullable=False)  # 'user' | 'assistant'
     content = Column(Text, nullable=False)
+    character_id = Column(Integer, nullable=True)
     timestamp = Column(DateTime, default=datetime.now, nullable=False)
-    message_metadata = Column(
-        Text, nullable=True
-    )  # JSON en tant que texte - renommé pour éviter conflit avec SQLAlchemy
+    message_metadata = Column(Text, nullable=True)  # JSON sérialisé
 
-    # Relations
     session = relationship("ChatSessionModel", back_populates="messages")
 
 

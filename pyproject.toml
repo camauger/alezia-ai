@@ -27,3 +27,9 @@ warn_unused_configs = true
 # if they are too noisy when working with AI-generated code.
 disallow_untyped_defs = false # Allows functions without type hints.
 disallow_incomplete_defs = false # Allows functions with partial type hints.
+
+[tool.pytest.ini_options]
+# La racine du projet doit être sur sys.path pour que `pytest` (nu) trouve le
+# package `backend` — sinon il faut `python -m pytest`. Voir __init__.py racine.
+pythonpath = ["."]
+testpaths = ["tests"]

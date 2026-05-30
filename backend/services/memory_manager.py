@@ -45,6 +45,20 @@ class MemoryManager:
                 memory.content, memory.memory_type
             )
 
+        # --- Traduction MemoryCreate -> MemoryModel ---
+        # MemoryCreate.memory_type  -> MemoryModel.type  (colonne SQL 'type')
+        # MemoryCreate.metadata     -> MemoryModel.memory_metadata (colonne SQL 'metadata')
+        # MemoryCreate.source       -> pas de colonne ORM, à supprimer
+        # MemoryCreate.timestamp    -> pas de colonne ORM (le modèle utilise created_at), à supprimer
+        memory_dict["type"] = memory_dict.pop("memory_type")
+        # MemoryType est un str-Enum : stocker la valeur brute (str)
+        if hasattr(memory_dict["type"], "value"):
+            memory_dict["type"] = memory_dict["type"].value
+        memory_dict["memory_metadata"] = memory_dict.pop("metadata", None)
+        memory_dict.pop("source", None)
+        memory_dict.pop("timestamp", None)
+        # --- fin de la traduction ---
+
         # Générer l'embedding pour le contenu de la mémoire
         if self.embedding_model:
             embedding = self.embedding_model.encode(memory.content)
@@ -576,7 +590,7 @@ class MemoryManager:
                 if memory2.id in processed_ids:
                     continue
 
-                if memory1.memory_type != memory2.memory_type:
+                if memory1.type != memory2.type:
                     continue
 
                 if memory1.embedding and memory2.embedding:

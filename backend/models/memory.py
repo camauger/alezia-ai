@@ -4,12 +4,11 @@ Module for character memory models
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, model_validator, validator
 from sqlalchemy import (
     JSON,
-    Boolean,
     Column,
     DateTime,
     Float,
@@ -49,6 +48,11 @@ class MemoryModel(Base):
     # Relationship
     character = relationship("CharacterModel", back_populates="memories")
     facts = relationship("FactModel", back_populates="source_memory")
+
+    @property
+    def memory_type(self):
+        """Alias for 'type' column, required by the Pydantic Memory model."""
+        return self.type
 
 
 class FactModel(Base):
@@ -97,7 +101,7 @@ class MemoryBase(BaseModel):
     )
     content: str = Field(..., description="Content of the memory")
     importance: float = Field(1.0, description="Importance of the memory (1.0-10.0)")
-    metadata: Optional[dict[str, Any]] = Field(
+    metadata: dict[str, Any] | None = Field(
         default_factory=dict, description="Additional metadata"
     )
 
@@ -106,7 +110,7 @@ class MemoryCreate(MemoryBase):
     """Model for creating a memory"""
 
     source: str = "user"
-    timestamp: Optional[datetime] = None
+    timestamp: datetime | None = None
 
     @validator("importance")
     def check_importance(cls, v):
@@ -124,12 +128,37 @@ class Memory(MemoryCreate):
 
     id: int
     created_at: datetime
-    last_accessed: Optional[datetime] = None
+    last_accessed: datetime | None = None
     access_count: int = 0
-    embedding_id: Optional[int] = None
+    embedding_id: int | None = None
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode='before')
+    @classmethod
+    def _remap_orm_fields(cls, values: Any) -> Any:
+        """Map ORM attribute names to Pydantic field names when reading from ORM.
+
+        MemoryModel uses:
+          - .type          -> memory_type
+          - .memory_metadata -> metadata  (avoids SQLAlchemy MetaData collision)
+        """
+        if hasattr(values, '__tablename__'):
+            # values is an ORM model instance
+            data: dict[str, Any] = {}
+            for col in ('id', 'character_id', 'content', 'importance',
+                        'created_at', 'last_accessed', 'access_count'):
+                data[col] = getattr(values, col, None)
+            data['memory_type'] = getattr(values, 'type', None)
+            raw_meta = getattr(values, 'memory_metadata', None)
+            data['metadata'] = raw_meta if isinstance(raw_meta, dict) else {}
+            # source and timestamp/embedding_id have defaults; set safely
+            data['source'] = getattr(values, 'source', 'user') or 'user'
+            data['timestamp'] = getattr(values, 'created_at', None)
+            data['embedding_id'] = None
+            return data
+        return values
 
 
 class RetrievedMemory(BaseModel):
@@ -155,7 +184,7 @@ class FactBase(BaseModel):
     predicate: str = Field(..., description="Predicate (relation, action)")
     object: str = Field(..., description="Object of the fact")
     confidence: float = Field(1.0, description="Confidence in this fact (0.0-1.0)")
-    source_memory_id: Optional[int] = Field(None, description="ID of the source memory")
+    source_memory_id: int | None = Field(None, description="ID of the source memory")
 
 
 class FactCreate(FactBase):

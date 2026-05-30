@@ -1,2 +1,10 @@
-SQLAlchemy\"python-decouple\" 
-\"ruff\" 
+fastapi
+uvicorn
+sqlalchemy
+python-decouple
+requests
+numpy
+sentence-transformers
+pytest
+httpx  # required by FastAPI TestClient for smoke tests
+ruff
