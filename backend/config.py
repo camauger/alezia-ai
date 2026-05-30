@@ -10,7 +10,7 @@ from decouple import config, Csv
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / 'data'
-DB_PATH = DATA_DIR / 'jdr_database.sqlite'
+DB_PATH = DATA_DIR / 'alezia.db'
 
 # Ollama configuration (clés lues par backend/services/llm_service.py)
 LLM_CONFIG = {

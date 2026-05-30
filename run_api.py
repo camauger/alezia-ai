@@ -57,27 +57,37 @@ def save_port_to_file(port):
 
 
 def initialize_database():
-    """Initialise la base de données et les données par défaut"""
+    """Initialise la base de données via l'ORM et un univers par défaut."""
     try:
-        from backend.utils.db import db_manager
+        import datetime
 
-        # Forcer l'initialisation du schéma
-        db_manager._initialize_schema()
-        # Assurer la présence d'un univers par défaut
-        universe_id = db_manager.ensure_default_universe()
-        if universe_id:
-            print(f'Univers par défaut initialisé avec ID: {universe_id}')
+        import backend.models.chat  # noqa: F401  (peuple Base.metadata avec les tables chat)
+        from backend import models  # noqa: F401  (peuple Base.metadata)
+        from backend.database import Base, SessionLocal, engine
+        from backend.models.universe import UniverseModel
 
-        # Vérifier si des personnages existent
-        characters = db_manager.get_all('characters')
-        print(f'Nombre de personnages dans la base de données: {len(characters)}')
+        Base.metadata.create_all(bind=engine)
 
-        if characters:
-            for character in characters:
-                print(
-                    f'Personnage existant: ID={character["id"]}, Nom={character["name"]}'
+        db = SessionLocal()
+        try:
+            if db.query(UniverseModel).count() == 0:
+                db.add(
+                    UniverseModel(
+                        name="Monde moderne",
+                        description="Un univers contemporain similaire au monde réel actuel",
+                        type="réaliste",
+                        time_period="2024",
+                        rules="Lois de la physique standards, technologies modernes disponibles",
+                        created_at=datetime.datetime.now(),
+                    )
                 )
+                db.commit()
+                print("Univers par défaut initialisé.")
+            from backend.models.character import CharacterModel
 
+            print(f"Personnages en base: {db.query(CharacterModel).count()}")
+        finally:
+            db.close()
         return True
     except Exception as e:
         print(f"Erreur lors de l'initialisation de la base de données: {e}")
