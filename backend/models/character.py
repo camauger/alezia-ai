@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field, root_validator, validator
+from pydantic import BaseModel, Field, field_validator, root_validator, validator
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
@@ -172,12 +172,28 @@ class CharacterCreate(CharacterBase):
     )
 
 
+def _universe_to_name(v: Any) -> Optional[str]:
+    """Convertit la relation ORM ``universe`` (UniverseModel) en son nom (str).
+
+    ``from_attributes`` lit l'attribut ORM ``universe`` qui est un objet
+    ``UniverseModel`` ; le champ Pydantic attend un nom. Accepte aussi
+    une chaîne ou ``None`` tels quels.
+    """
+    if v is None or isinstance(v, str):
+        return v
+    return getattr(v, "name", None)
+
+
 class Character(CharacterBase):
     """Complete model of a character with its metadata"""
 
     id: int
     created_at: datetime
     universe: Optional[str] = None
+
+    _normalize_universe = field_validator("universe", mode="before")(
+        _universe_to_name
+    )
 
     class Config:
         from_attributes = True
@@ -190,6 +206,10 @@ class CharacterSummary(BaseModel):
     name: str
     description: str
     universe: Optional[str] = None
+
+    _normalize_universe = field_validator("universe", mode="before")(
+        _universe_to_name
+    )
 
     class Config:
         from_attributes = True
