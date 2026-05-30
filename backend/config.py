@@ -5,7 +5,8 @@ Optimized for i7-13700HX + RTX 4060 Laptop GPU (8 GB VRAM)
 
 import os
 from pathlib import Path
-from decouple import config, Csv
+
+from decouple import Csv, config
 
 # Base paths
 BASE_DIR = Path(__file__).resolve().parent
@@ -47,8 +48,6 @@ SYSTEM_LIMITS = {
     'max_characters': 20,
     'max_universes': 10,
 }
-
-from decouple import Csv, config
 
 # Security configuration
 SECURITY_CONFIG = {
